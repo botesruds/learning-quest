@@ -5,6 +5,7 @@ import { RoundedBoxGeometry } from "../vendor/addons/RoundedBoxGeometry.js";
 export { THREE };
 export const isTouch = matchMedia("(pointer: coarse)").matches;
 export const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+export const lowGfx = new URLSearchParams(location.search).has("lowgfx");   // simpler graphics (automated tests, very old tablets)
 
 /* ---------- cached geometry and materials ---------- */
 const geoCache = new Map(), matCache = new Map();
@@ -28,12 +29,12 @@ export const group = (...kids) => { const g = new THREE.Group(); kids.forEach(k 
 
 /* ---------- the stage ---------- */
 export function createStage(canvas) {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-  const dpr = Math.min(window.devicePixelRatio || 1, isTouch ? 1.6 : 2);
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !lowGfx, powerPreference: "high-performance" });
+  const dpr = lowGfx ? 1 : Math.min(window.devicePixelRatio || 1, isTouch ? 1.6 : 2);
   renderer.setPixelRatio(dpr);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
-  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.enabled = !lowGfx; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(42, 1, 0.5, 400);
@@ -88,12 +89,15 @@ export function createStage(canvas) {
     sun.target.position.copy(rig.target); sun.position.set(rig.target.x + 18, 30, rig.target.z + 12);
   }
 
+  let shiftPx = 0;   // lifts the picture so the fort sits in the space above the build tray
   function resize() {
     const w = canvas.clientWidth || innerWidth, h = canvas.clientHeight || innerHeight;
     renderer.setSize(w, h, false); camera.aspect = w / h;
     camera.fov = w / h < 0.8 ? 58 : 42; // portrait iPad / phone: widen the view
+    if (shiftPx) camera.setViewOffset(w, h, 0, shiftPx, w, h); else camera.clearViewOffset();
     camera.updateProjectionMatrix();
   }
+  function setShift(px) { shiftPx = Math.round(px || 0); resize(); }
   addEventListener("resize", resize); resize();
 
   const updaters = new Set();
@@ -111,7 +115,7 @@ export function createStage(canvas) {
   document.addEventListener("visibilitychange", () => { if (document.hidden) running = false; else if (!running) { running = true; clock.getDelta(); loop(); } });
   loop();
 
-  return { renderer, scene, camera, sun, hemi, rig, setMood, shake, flyTo, resize, onFrame: fn => (updaters.add(fn), () => updaters.delete(fn)), get fps() { return fps; } };
+  return { renderer, scene, camera, sun, hemi, rig, setMood, shake, flyTo, resize, setShift, onFrame: fn => (updaters.add(fn), () => updaters.delete(fn)), get fps() { return fps; } };
 }
 
 /* ---------- particles: pooled little cubes (dust, sparkles, confetti, demon pops) ---------- */

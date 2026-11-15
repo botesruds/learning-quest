@@ -6,33 +6,45 @@ export const REGION_LOOK = {
 };
 
 /* ---------- island of chunky columns ---------- */
-export function makeIsland(region = 1, { size = 34, flat = 8 } = {}) {
+export function makeIsland(region = 1, { size = 48, flat = 14 } = {}) {
   const L = REGION_LOOK[region] || REGION_LOOK[1];
   const n = noise2(region * 3.1), half = size / 2;
   const cells = [];
   for (let i = 0; i < size; i++) for (let j = 0; j < size; j++) {
-    const x = i - half + 0.5, z = j - half + 0.5, d = Math.hypot(x, z * 1.08);
-    const wob = (n(x * 0.18, z * 0.18) - 0.5) * 6;
-    const edge = half - 3 + wob;
+    const x = i - half + 0.5, z = j - half + 0.5;
+    const d = Math.pow(Math.pow(Math.abs(x), 4) + Math.pow(Math.abs(z), 4), 0.25);   // rounded-square island
+    const wob = (n(x * 0.15, z * 0.15) - 0.5) * 5;
+    const edge = half - 2.5 + wob;
     if (d > edge) continue;
+    const onPlateau = Math.max(Math.abs(x), Math.abs(z)) <= flat;
     let h;
-    if (Math.max(Math.abs(x), Math.abs(z)) <= flat) h = 1;                 // flat building plateau
-    else { const t = 1 - (d - flat) / Math.max(1, edge - flat); h = 1 + Math.round(Math.max(0, (n(x * 0.3 + 9, z * 0.3) - 0.35) * 3.2 * t)); }
-    const shore = d > edge - 1.6;
-    cells.push({ x, z, h: shore ? 0.6 : h, shore });
+    if (onPlateau) h = 1;                                                    // flat building land
+    else { const t = Math.min(1, (d - flat) / 3); h = 1 + Math.round(Math.max(0, (n(x * 0.3 + 9, z * 0.3) - 0.3) * 3.4 * t)); }
+    const shore = !onPlateau && d > edge - 1.6;
+    cells.push({ x, z, h: shore ? 0.6 : h, shore, plateau: onPlateau, gx: Math.floor(x), gz: Math.floor(z) });
   }
   const top = new THREE.InstancedMesh(rbox(1, 0.34, 1, 0.07), mat(0xffffff), cells.length);
   const dirt = new THREE.InstancedMesh(new THREE.BoxGeometry(0.98, 1, 0.98), mat(L.dirt), cells.length);
   const dummy = new THREE.Object3D(), col = new THREE.Color();
   cells.forEach((c, k) => {
-    const depth = c.h + 3; // columns reach down under the water
+    const depth = c.h + 3;
     dummy.position.set(c.x, c.h - 0.17 - depth / 2, c.z); dummy.scale.set(1, depth, 1); dummy.updateMatrix(); dirt.setMatrixAt(k, dummy.matrix);
     dummy.position.set(c.x, c.h - 0.17, c.z); dummy.scale.set(1, 1, 1); dummy.updateMatrix(); top.setMatrixAt(k, dummy.matrix);
-    col.set(c.shore ? L.sand : ((Math.floor(c.x) + Math.floor(c.z)) & 1 ? L.grass : L.grass2));
-    col.offsetHSL(0, 0, (n(c.x * 0.7, c.z * 0.7) - 0.5) * 0.06); top.setColorAt(k, col);
+    c.k = k;
   });
+  /* colour the grass: claimed building land is bright, unclaimed land is muted */
+  function paint(claimed = () => true) {
+    cells.forEach(c => {
+      col.set(c.shore ? L.sand : ((c.gx + c.gz) & 1 ? L.grass : L.grass2));
+      col.offsetHSL(0, 0, (n(c.x * 0.7, c.z * 0.7) - 0.5) * 0.06);
+      if (c.plateau && !claimed(c.gx, c.gz)) col.offsetHSL(0.02, -0.28, -0.06);
+      top.setColorAt(c.k, col);
+    });
+    top.instanceColor.needsUpdate = true;
+  }
+  paint();
   [top, dirt].forEach(m => { m.castShadow = true; m.receiveShadow = true; });
-  const g = group(top, dirt); g.userData.cells = cells;
+  const g = group(top, dirt); g.userData.cells = cells; g.userData.paint = paint;
   return g;
 }
 
