@@ -89,15 +89,15 @@ export function createStage(canvas) {
     sun.target.position.copy(rig.target); sun.position.set(rig.target.x + 18, 30, rig.target.z + 12);
   }
 
-  let shiftPx = 0;   // lifts the picture so the fort sits in the space above the build tray
+  let shiftPx = 0, shiftX = 0;   // moves the picture so the fort sits in the space beside a panel (above the build tray, or right of a lesson)
   function resize() {
     const w = canvas.clientWidth || innerWidth, h = canvas.clientHeight || innerHeight;
     renderer.setSize(w, h, false); camera.aspect = w / h;
     camera.fov = w / h < 0.8 ? 58 : 42; // portrait iPad / phone: widen the view
-    if (shiftPx) camera.setViewOffset(w, h, 0, shiftPx, w, h); else camera.clearViewOffset();
+    if (shiftPx || shiftX) camera.setViewOffset(w, h, shiftX, shiftPx, w, h); else camera.clearViewOffset();
     camera.updateProjectionMatrix();
   }
-  function setShift(px) { shiftPx = Math.round(px || 0); resize(); }
+  function setShift(px, x = 0) { shiftPx = Math.round(px || 0); shiftX = Math.round(x || 0); resize(); }
   addEventListener("resize", resize); resize();
 
   const updaters = new Set();

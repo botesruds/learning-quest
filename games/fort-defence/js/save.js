@@ -19,6 +19,8 @@ export const blank = () => ({
   blueprints: {},            // piece type -> count available to place
   forts: {},                 // region number -> { pieces: [{t,x,z,r,hp}] }
   weak: {},                  // topic id -> wall cracks waiting for repair
+  uq: {},                    // understanding questions: topic key -> { seen:[indices], right }
+  kit: 0, bonusLand: 0,
   region: 1, day: 1,
   sound: true, music: true,
 });

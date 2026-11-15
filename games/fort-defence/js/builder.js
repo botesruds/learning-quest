@@ -15,7 +15,7 @@ export function createBuilder({ stage, fort, fx, save, toast, onChange }) {
   const thumbs = {};
   let selected = null;           // tray item chosen for tap/paint building
   let drag = null;               // { kind: "new" | "move", type, cell, ghost, gx, gz, verdict }
-  let popup = null, trayEl = null, matsEl = null, tab = "defend";
+  let popup = null, trayEl = null, matsEl = null, tab = "defend", active = false;   // active: build mode is on screen
   const drops = [];              // pieces falling into place
 
   /* ---------- money ---------- */
@@ -112,7 +112,7 @@ export function createBuilder({ stage, fort, fx, save, toast, onChange }) {
     if (ptrs.size === 2) { if (drag && drag.kind === "move") cancelDrag(); const [a, b] = [...ptrs.values()]; gesture = { kind: "pinch", d: Math.hypot(a.x - b.x, a.y - b.y), ang: Math.atan2(b.y - a.y, b.x - a.x) }; paintLast = null; return; }
     if (e.button === 2 || e.button === 1) { gesture = { kind: "orbit" }; return; }
     if (selected) { gesture = { kind: "paint" }; paintAt(e.clientX, e.clientY); return; }
-    const c = pieceAt(e.clientX, e.clientY);
+    const c = active ? pieceAt(e.clientX, e.clientY) : null;
     gesture = c ? { kind: "piece", cell: c } : { kind: "orbit", tap: true };
   });
   canvas.addEventListener("pointermove", e => {
@@ -244,10 +244,10 @@ export function createBuilder({ stage, fort, fx, save, toast, onChange }) {
   function mount(ui) {
     matsEl = h("div", { class: "mats", "aria-label": "Your materials" });
     trayEl = h("div", { class: "tray panel", role: "toolbar", "aria-label": "Build tray" }, h("div", { class: "tabs" }), h("div", { class: "items" }), h("div", { class: "drophere" }, "↩ Drop here to pick it up"));
-    paintMats(); paintTray();
+    paintMats(); paintTray(); active = true;
     return { mats: matsEl, tray: trayEl };
   }
-  function unmount() { closePopup(); if (drag) cancelDrag(); selected = null; fort.showGrid(false); }
+  function unmount() { closePopup(); if (drag) cancelDrag(); selected = null; active = false; fort.showGrid(false); }
 
   /* idle towers look around */
   stage.onFrame((dt, t) => fort.cells.forEach(c => { const a = c.obj && c.obj.userData.aim; if (a) a.rotation.y = Math.sin(t * 0.4 + c.gx * 1.3 + c.gz) * 1.2; }));

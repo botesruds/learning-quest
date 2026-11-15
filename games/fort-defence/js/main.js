@@ -1,9 +1,12 @@
-/* Fort Defence: boot, title screen and the fort builder. */
+/* Fort Defence: boot, title screen, dawn (what next), the day sheet and the fort builder. */
 import { THREE, createStage, createParticles, isTouch } from "./gfx.js";
 import { makeIsland, makeWater, makeTree, makeRock, makeFlower, makeCloud, makeKeep, makeHero, makeDemon, REGION_LOOK } from "./models.js";
 import { createSave } from "./save.js";
 import { unlockAudio, sfx, playMusic, stopMusic, setSfx, setMusic, SFX_NAMES } from "./audio.js";
-import { createFort } from "./fort.js";
+import { createFort, claimedHalf } from "./fort.js";
+import { createProgress } from "./progress.js";
+import { createDay } from "./day.js";
+import { MATS, PIECES } from "./pieces.js";
 import { createBuilder } from "./builder.js";
 
 const ui = document.getElementById("ui");
@@ -26,7 +29,7 @@ const live = new Set();                           // objects with their own upda
 stage.onFrame((dt, t) => live.forEach(o => o.userData.update && o.userData.update(dt, t)));
 const addLive = o => { if (o.userData.update) live.add(o); scene.add(o); return o; };
 
-let island = null, fort = null, builder = null;
+let island = null, fort = null, builder = null, prog = null, day = null;
 function buildWorld(region = 1) {
   const L = REGION_LOOK[region];
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -49,6 +52,7 @@ function buildWorld(region = 1) {
 }
 buildWorld(1);
 const TITLE_VIEW = { yaw: 0.7, pitch: 0.5, dist: isTouch ? 52 : 46, target: new THREE.Vector3(0, 2, 0) };
+const DAWN_VIEW = { yaw: 0.9, pitch: 0.62, dist: isTouch ? 44 : 38, target: new THREE.Vector3(0, 2, 0) };
 const BUILD_VIEW = { yaw: 0.78, pitch: 0.82, dist: isTouch ? 38 : 34, target: new THREE.Vector3(0, 1, 0) };
 Object.assign(rig, { yaw: TITLE_VIEW.yaw, pitch: TITLE_VIEW.pitch, dist: TITLE_VIEW.dist, autoSpin: 0.05 }); rig.target.copy(TITLE_VIEW.target);
 
@@ -95,17 +99,56 @@ function titleScreen() {
 function startGame() {
   unlockAudio(); setSfx(S().sound); setMusic(S().music);
   sfx("whoosh"); playMusic("day");
-  rig.autoSpin = 0; stage.flyTo(BUILD_VIEW, 1.6);
   if (!S().startedAt) { S().startedAt = Date.now(); save.commit(); }
-  buildScreen();
+  dawnScreen();
+}
+
+/* dawn: the fort as he left it, and one big glowing button for what's next */
+function matsChips() {
+  return h("div", { class: "mats", "aria-label": "Your materials" }, ...["wood", "stone", "iron", "crystal", "gold"].map(m => h("span", { class: "mat", title: MATS[m].name }, h("span", { class: "mi" }, MATS[m].icon), h("b", {}, m === "gold" ? S().gold : (S().mats[m] || 0)))),
+    h("span", { class: "mat", title: "Tower plans" }, h("span", { class: "mi" }, "📜"), h("b", {}, Object.keys(PIECES).filter(k => PIECES[k].bp).reduce((a, k) => a + (S().blueprints[k] || 0), 0))));
+}
+function dawnScreen() {
+  if (builder) builder.unmount();
+  if (day && day.isOpen) day.close("nav");
+  stage.setShift(0, 0); rig.autoSpin = 0.03; stage.flyTo(DAWN_VIEW, 1.4);
+  const cur = prog.currentNode();
+  let main, sub = "";
+  if (cur.t === "level") {
+    const tp = prog.topic(cur.key), st = prog.stars(cur.key);
+    main = h("button", { class: "btn pulse go-day", type: "button", onclick: () => { sfx("whoosh"); day.open(cur.key); } }, cur.repair ? `🔧 Repair: ${tp.t.short}` : `☀️ Day ${prog.dayNo(cur.key)}: ${tp.t.short}`);
+    sub = cur.repair ? "A demon lord found a weak spot. Fix it to make the wall strong again." : `${tp.region ? tp.region.emoji + " " + tp.region.name + " · " : ""}${st ? "⭐".repeat(st) + " so far" : "A new day"}`;
+  } else {
+    const lord = cur.t === "final" ? cur.region.final : cur.region.lord;
+    main = h("button", { class: "btn pulse go-day", type: "button", onclick: () => { sfx("horn"); toast(`${lord.name[0].toUpperCase() + lord.name.slice(1)} arrives in a later stage of this build. Every day in ${cur.region.name} is mastered!`); } }, `${cur.t === "final" ? "🐉" : "👹"} ${lord.name[0].toUpperCase() + lord.name.slice(1)}`);
+    sub = "Every day in this region is mastered. The demon lord is coming!";
+  }
+  const chest = prog.road.find(n => n.t === "chest" && !prog.nodeDone(n) && n.region === (cur.region || {}));
+  const back = h("button", { class: "chip icon", type: "button", "aria-label": "Back to the title", title: "Back", onclick: () => { sfx("click"); stage.flyTo(TITLE_VIEW, 1.4); setTimeout(() => (rig.autoSpin = 0.05), 1400); stopMusic(); setTimeout(() => playMusic("title"), 300); titleScreen(); } }, "◀");
+  const card = h("div", { class: "dawn panel fade-in" },
+    h("p", { class: "dsub" }, sub), main,
+    h("div", { class: "drow" },
+      h("button", { class: "btn small blue", type: "button", onclick: () => { sfx("click"); rig.autoSpin = 0; stage.flyTo(BUILD_VIEW, 1.2); buildScreen(); } }, "🔨 Build"),
+      h("button", { class: "btn small plain", type: "button", onclick: () => { sfx("click"); day.openMap(); } }, "📜 Quest map"),
+      chest ? h("button", { class: "btn small gold", type: "button", onclick: () => { sfx("click"); day.openChest(chest.pack, chest.region); } }, "🎁 New scout report") : null));
+  ui.replaceChildren(hud([back]), matsChips(), h("div", { class: "grow" }), card);
+  setTimeout(() => main.focus({ preventScroll: true }), 60);
+}
+
+/* after a day: did he claim more land? */
+function landCheck() {
+  const before = fort.half, after = claimedHalf(S());
+  if (after > before) { fort.redrawLand(); sfx("horn"); return after * 2; }
+  return null;
 }
 
 function buildScreen() {
   const { mats, tray } = builder.mount();
-  const back = h("button", { class: "chip icon", type: "button", "aria-label": "Back to the title", title: "Back", onclick: () => { sfx("click"); builder.unmount(); stage.flyTo(TITLE_VIEW, 1.4); setTimeout(() => (rig.autoSpin = 0.05), 1400); stopMusic(); setTimeout(() => playMusic("title"), 300); titleScreen(); } }, "◀");
+  const back = h("button", { class: "chip icon", type: "button", "aria-label": "Finish building", title: "Finish building", onclick: () => { sfx("click"); dawnScreen(); } }, "◀");
+  const done = h("button", { class: "chip", type: "button", onclick: () => { sfx("click"); dawnScreen(); } }, "✓ Done building");
   const spin = h("button", { class: "chip icon", type: "button", "aria-label": "Turn the view", title: "Turn the view", onclick: () => { sfx("whoosh"); stage.flyTo({ yaw: rig.yaw + Math.PI / 2 }, 0.7); } }, "↻");
   const mission = h("div", { class: "mission fade-in" }, h("b", {}, "Build your fort! "), "Drag pieces onto the grass. Drop a piece on the same piece to upgrade it.");
-  ui.replaceChildren(hud([back, spin]), mats, mission, h("div", { class: "grow" }), tray);
+  ui.replaceChildren(hud([back, spin, done]), mats, mission, h("div", { class: "grow" }), tray);
   const lift = () => { if (tray.isConnected) stage.setShift(tray.getBoundingClientRect().height * 0.45); };
   requestAnimationFrame(lift); addEventListener("resize", lift);
 }
@@ -159,9 +202,13 @@ function demoFort() {
   starterKit();
   fort = createFort({ scene, state: S, region: 1, island, onFrameObjects: live });
   builder = createBuilder({ stage, fort, fx, save, toast });
+  prog = createProgress(S, () => save.commit());
+  day = createDay({ save, prog, stage, toast, onLand: landCheck,
+    onBuild: () => { rig.autoSpin = 0; stage.flyTo(BUILD_VIEW, 1.2); buildScreen(); },
+    onClose: why => { if (why !== "build" && why !== "nav") dawnScreen(); } });
   titleScreen();
   const wake = () => { if (unlockAudio() && S().music && !builder.selected) playMusic("title"); removeEventListener("pointerdown", wake); };
   addEventListener("pointerdown", wake);
   if (DEV) bench();
-  window.__fd = { stage, save, fx, fort, builder, THREE };
+  window.__fd = { stage, save, fx, fort, builder, prog, day, THREE, dawnScreen };
 })();

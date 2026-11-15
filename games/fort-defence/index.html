@@ -9,7 +9,8 @@
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Lilita+One&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@500;700&family=Lilita+One&display=swap">
+<link rel="stylesheet" href="css/learn.css">
 <script src="../../shared/family.js"></script>
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 <style>
@@ -56,6 +57,10 @@ button.chip{cursor:pointer}
 .toast{position:fixed;pointer-events:none;left:50%;top:132px;max-width:min(560px,calc(100vw - 32px));text-align:center;transform:translateX(-50%);z-index:20;background:#1b2236;color:#fff;padding:12px 18px;border-radius:14px;font:700 17px var(--f-body);box-shadow:var(--shadow);animation:pop .25s ease-out}
 @keyframes pop{from{transform:translate(-50%,-14px);opacity:0}}
 .fade-in{animation:fadein .5s ease-out both}
+.dawn{align-self:center;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;max-width:min(620px,100%);width:100%;padding:16px 18px 18px}
+.dawn .dsub{margin:0;font:700 16px var(--f-body);color:#5b5446}
+.dawn .go-day{font-size:clamp(22px,4.4vw,30px);padding:16px 26px;max-width:100%;white-space:normal;line-height:1.15}
+.dawn .drow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
 @keyframes fadein{from{opacity:0;transform:translateY(16px)}}
 .loading{margin:auto;font:28px var(--f-game);color:#fff;text-shadow:0 3px 0 rgba(0,0,0,.3)}
 #bench{position:fixed;right:12px;top:80px;z-index:30;width:min(380px,calc(100vw - 24px));max-height:70vh;overflow:auto;font-size:14px;padding:14px}
