@@ -165,6 +165,8 @@ function bench() {
     h("button", { type: "button", onclick: () => { Object.keys(S().mats).forEach(m => (S().mats[m] += 30)); S().gold += 200; S().blueprints.arrow = (S().blueprints.arrow || 0) + 3; S().blueprints.cannon = (S().blueprints.cannon || 0) + 2; save.commit(); builder.paintMats(); builder.paintTray(); } }, "+ materials"),
     h("button", { type: "button", onclick: () => { S().bonusLand = Math.min(4, (S().bonusLand || 0) + 1); save.commit(); fort.redrawLand(); toast(`Land is now ${fort.half * 2} × ${fort.half * 2}`); } }, "+ land"),
     h("button", { type: "button", onclick: () => demoFort() }, "build a demo castle"),
+    h("button", { type: "button", onclick: () => { S().unlockAll = !S().unlockAll; save.commit(); toast(S().unlockAll ? "Every day is open" : "Days open in order again"); dawnScreen(); } }, "unlock all days"),
+    h("button", { type: "button", onclick: () => { const c = prog.currentNode(); if (c.t !== "level") return; Object.assign(prog.L(c.key), { stars: 3, train: true }); S().learnDone[c.key] = true; delete S().repair[c.key]; save.commit(); const land = landCheck(); toast(`Day ${prog.dayNo(c.key)} mastered` + (land ? `, land is now ${land} × ${land}` : "")); dawnScreen(); } }, "master today"),
     save.practice ? h("button", { type: "button", onclick: () => { save.resetPractice(); location.reload(); } }, "reset practice save") : null);
   const panel = h("div", { id: "bench", class: "panel" }, h("button", { type: "button", style: "float:right", onclick: () => panel.classList.toggle("min") }, "–"), h("h3", {}, "Test bench"), h("b", {}, "Fort"), fortRow, h("b", {}, "Sky"), moodRow, h("b", {}, "Music"), musRow, h("b", {}, "Sound effects"), sfxRow, out);
   document.body.append(panel);
