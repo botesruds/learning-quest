@@ -8,10 +8,10 @@
    - 6 runes a night: today's 4 Brain check questions (3 right earns the third star, the same pass mark as Algebra Quest)
      and 2 quick questions on today's topic. The fort can't be lost: demons that reach the keep just bump it and vanish. */
 import { THREE, block, reducedMotion, isTouch } from "./gfx.js";
-import { makeDemon } from "./models.js";
+import { makeDemon, makeLord } from "./models.js";
 import { PIECES } from "./pieces.js";
-import { h, pick, shuffle } from "./qcore.js";
-import { QuestionCard } from "./qui.js";
+import { h, pick, shuffle, esc, SayBtn } from "./qcore.js";
+import { QuestionCard, AnswerBox } from "./qui.js";
 import { sfx, playMusic } from "./audio.js";
 
 const BLOCKS = new Set(["wall", "gate", "arrow", "cannon", "house", "well", "statue", "torch", "banner", "bush"]);
@@ -79,10 +79,49 @@ export function createNight({ stage, fx, fort, island, save, prog, ui, toast, on
     const quick = (tp.t.gen || []).length ? [0, 1].map(() => pick(tp.t.gen)()) : [];
     // runes: quick, brain, brain, quick, brain, brain
     const runes = []; const qs = quick.slice(), cs = checks.slice();
-    [["q"], ["b"], ["b"], ["q"], ["b"], ["b"]].forEach(([t]) => { if (t === "q" && qs.length) runes.push({ type: "quick", obj: qs.shift() }); else if (cs.length) runes.push({ type: "brain", obj: cs.shift() }); else if (qs.length) runes.push({ type: "quick", obj: qs.shift() }); });
+    [["q"], ["b"], ["b"], ["q"], ["b"], ["b"]].forEach(([t]) => { if (t === "q" && qs.length) runes.push({ type: "quick", obj: qs.shift(), key }); else if (cs.length) runes.push({ type: "brain", obj: cs.shift(), key }); else if (qs.length) runes.push({ type: "quick", obj: qs.shift(), key }); });
     const strength = 1 + prog.dayNo(key) * 0.05;
     N = { key, tp, runes, seg: -1, segT: 0, spawnQ: [], demons: [], shots: [], fx: [], time: 0, frozen: false, rune: null, runeReady: false, runeDone: true,
-      brain: { right: 0, total: checks.length }, kills: 0, bumps: 0, gold: 0, crystal: 0, cracks: [], strength, wave: 0 };
+      brain: { right: 0, total: checks.length }, kills: 0, bumps: 0, gold: 0, crystal: 0, cracks: [], strength, wave: 0, look: tp.region ? (tp.region.look || tp.region.n) : 1 };
+    begin();
+    toast(`Night falls. Defend your fort! Tap each ✨ rune when it appears.`);
+  }
+
+  /* ---------- a demon lord's siege: the world boss, with Algebra Quest's rules ----------
+     8 quick questions from the region's days plus 2 why-questions, 8 hits to win (the Dragon: the 16 practice-exam
+     questions, 13 to win). Each question gets one try. If the lord survives, every day he missed is marked for repair. */
+  function startSiege(node) {
+    stop(true);
+    const fin = node.t === "final", pack = node.pack, R = node.region;
+    const lord = fin ? R.final : R.lord, items = [];
+    const T = id => prog.topic(prog.keyOf(pack, id));
+    if (fin) (R.final.topics || []).forEach(id => { const tp = T(id); if (tp && tp.t.gen && tp.t.gen.length) items.push({ type: "quick", obj: pick(tp.t.gen)(), key: tp.key }); });
+    else {
+      const ids = R.topics.filter(id => T(id) && T(id).t.gen && T(id).t.gen.length), sh = shuffle(ids);
+      for (let i = 0; i < (lord.questions || 8); i++) { const tp = T(sh[i % sh.length]); items.push({ type: "quick", obj: pick(tp.t.gen)(), key: tp.key }); }
+      const ck = shuffle(R.topics.flatMap(id => (T(id) && T(id).t.checks || []).map(c => ({ c, key: T(id).key })))).slice(0, lord.checks ?? 2);
+      // the why-questions come 3rd and 7th, so the night mixes thinking and doing
+      ck.forEach((x, i) => items.splice(i ? 6 : 2, 0, { type: "brain", obj: x.c, key: x.key }));
+    }
+    const need = lord.need || (fin ? 13 : 8);
+    N = { siege: true, fin, pack, region: R, lord, lordKey: fin ? "final" : prog.lordKey(pack, R), need, hits: 0, wrong: new Set(),
+      key: items[0] && items[0].key, tp: { t: { short: cap(lord.name) } }, runes: items, seg: -1, segT: 0, spawnQ: [], demons: [], shots: [], fx: [], time: 0,
+      frozen: false, rune: null, runeReady: false, runeDone: true, brain: { right: 0, total: items.filter(i => i.type === "brain").length },
+      kills: 0, bumps: 0, gold: 0, crystal: 0, cracks: [], strength: fin ? 2.2 : 1.5 + (R.n || 1) * 0.15, wave: 0, look: R.look || R.n };
+    begin();
+    // the lord wades in from the sea beside the island, at the side of the screen, so nothing hides him
+    const px = -Math.cos(NIGHT_VIEW.yaw), pz = Math.sin(NIGHT_VIEW.yaw), far = { x: px * 21, z: pz * 21 };
+    const L = makeLord(N.look); L.position.set(far.x, 0.6, far.z); N.lordScale = 1.9; L.scale.setScalar(N.lordScale);
+    L.rotation.y = Math.atan2(-px + Math.sin(NIGHT_VIEW.yaw), -pz + Math.cos(NIGHT_VIEW.yaw));   // he faces the fort and the player
+    const bar = hpBar(); bar.scale.set(4, 2.5, 1); bar.position.set(far.x, N.fin ? 9 : 7.4, far.z); scene.add(bar);
+    scene.add(L); N.lordObj = L; N.lordBar = bar; N.offLord = stage.onFrame((dt, t) => { if (!N || !N.lordObj) return; L.userData.update(dt, t); bar.quaternion.copy(camera.quaternion); const k = Math.max(0, 1 - N.hits / N.need); bar.userData.fg.scale.x = Math.max(0.001, k); bar.userData.fg.position.x = -0.45 * (1 - k); if (N.lordHit > 0) { N.lordHit -= dt; const q = 1 + N.lordHit * 0.6; L.scale.set(q * N.lordScale, N.lordScale / q, q * N.lordScale); } });
+    stage.flyTo({ ...NIGHT_VIEW, dist: NIGHT_VIEW.dist + 6, target: NIGHT_VIEW.target.clone().add(new THREE.Vector3(px * 4, 0, pz * 4)) }, 1.8);
+    sfx("horn"); setTimeout(() => sfx("horn"), 500);
+    toast(`${cap(lord.name)} attacks! ${need} hits win. Tap each ✨ rune when it appears.`);
+  }
+  const cap = s => s ? s[0].toUpperCase() + s.slice(1) : "";
+
+  function begin() {
     // tonight every piece is at full strength (cracked ones at half)
     const cr = Object.fromEntries(fort.crackList().map(c => [c.cell, c.topic]));
     fort.cells.forEach(c => { c.broken = false; c.cracked = !!cr[K(c.gx, c.gz)]; c.nightHp = c.maxHp = HP[c.t] ? HP[c.t][c.lv - 1] * (c.cracked ? 0.5 : 1) : 0; c.cd = Math.random(); if (c.obj) c.obj.scale.set(1, 1, 1); });
@@ -94,13 +133,12 @@ export function createNight({ stage, fx, fort, island, save, prog, ui, toast, on
     stage.setShift(0, 0); stage.flyTo(NIGHT_VIEW, 1.6); stage.rig.autoSpin = 0;
     N.off = stage.onFrame(update);
     paintHud();
-    toast(`Night falls. Defend your fort! Tap each ✨ rune when it appears.`);
     N.nextSeg = 2.2;
   }
 
   function stop(quiet) {
     if (!N) return;
-    N.off && N.off();
+    N.off && N.off(); N.offLord && N.offLord(); if (N.lordObj) scene.remove(N.lordObj); if (N.lordBar) scene.remove(N.lordBar);
     N.demons.forEach(d => scene.remove(d.obj)); N.shots.forEach(s => scene.remove(s.m)); (N.portals || []).forEach(p => scene.remove(p)); if (N.runeObj) scene.remove(N.runeObj);
     fort.cells.forEach(c => { c.broken = false; c.cracked = false; if (c.obj) { c.obj.scale.set(1, 1, 1); if (c.obj.userData.light) c.obj.userData.light.intensity = 0; } });
     document.querySelectorAll(".freeze").forEach(e => e.remove());
@@ -204,7 +242,7 @@ export function createNight({ stage, fx, fort, island, save, prog, ui, toast, on
 
   function spawn(s) {
     const D = DEMON[s.kind], c = spawnCells[s.portal % spawnCells.length];
-    const obj = makeDemon(s.kind); obj.position.set(c.x, c.h, c.z); scene.add(obj);
+    const obj = makeDemon(s.kind, N.look); obj.position.set(c.x, c.h, c.z); scene.add(obj);
     const bar = hpBar(); bar.position.y = s.kind === "bat" ? 2.3 : 1.5; obj.add(bar);
     const d = { obj, bar, kind: s.kind, fly: D.fly, speed: D.speed * (0.9 + Math.random() * 0.2), hp: D.hp * N.strength, max: D.hp * N.strength, atk: D.atk, atkT: 0.5, cx: c.gx, cz: c.gz, next: null, age: 0, hitT: 0 };
     N.demons.push(d); sfx("demon");
@@ -212,7 +250,7 @@ export function createNight({ stage, fx, fort, island, save, prog, ui, toast, on
   }
   function nextSegment() {
     N.seg++; N.wave = N.seg + 1; N.runeDone = false;
-    const kinds = WAVES[N.seg % WAVES.length];
+    const kinds = WAVES[N.seg % WAVES.length].concat(N.siege ? ["imp"] : []);
     kinds.forEach((k, i) => N.spawnQ.push({ kind: k, portal: (i + N.seg) % 3, t: i ? 0.75 : 0.1 }));
     N.runeAt = 2.4; paintHud();
   }
@@ -260,9 +298,9 @@ export function createNight({ stage, fx, fort, island, save, prog, ui, toast, on
     N.runeReady = false; N.runeObj.visible = false; N.frozen = true; sfx("freeze"); paintHud();
     const ov = h("div", { class: "freeze" });
     const card = h("div", { class: "runecard sheet", role: "dialog", "aria-label": "Rune question" });
-    const label = `✨ Rune ${N.seg + 1} of ${N.runes.length} · ${r.type === "brain" ? "🧠 Brain check" : "⚡ Quick-fire"}`;
+    const label = `✨ Rune ${N.seg + 1} of ${N.runes.length} · ${r.type === "brain" ? (N.siege ? "🧠 Why question" : "🧠 Brain check") : N.siege ? "⚔️ One try" : "⚡ Quick-fire"}`;
     let result = null;
-    const resume = () => { ov.remove(); N.frozen = false; N.runeDone = true; N.after = 0; if (result === "right" || result === "half") strike(result === "half" ? 0.55 : 1); else fizzle(); paintHud(); };
+    const resume = () => { ov.remove(); N.frozen = false; N.runeDone = true; N.after = 0; if (result === "right" || result === "half") strike(result === "half" ? 0.55 : 1); else fizzle(r.key); paintHud(); };
     if (r.type === "brain") {
       const c = r.obj, body = h("div", { class: "card stack pop" });
       body.append(h("div", { class: "eyebrow" }, label), h("div", { class: "qs" }, c.q));
@@ -270,15 +308,25 @@ export function createNight({ stage, fx, fort, island, save, prog, ui, toast, on
       const opts = h("div", { class: "opts" + (c.c.some(x => x.length > 14) ? " col" : "") });
       c.c.forEach((txt, i) => opts.append(h("button", { class: "opt", type: "button", onclick: () => {
         opts.querySelectorAll("button").forEach(b => (b.disabled = true)); opts.children[c.a].classList.add("ok");
-        if (i === c.a) { result = "right"; N.brain.right++; N.crystal++; S().mats.crystal = (S().mats.crystal || 0) + 1; save.commit(); sfx("correct"); fb.className = "verdict good"; fb.innerHTML = "<b>Yes! The rune glows. +1 💎</b> " + c.why; }
-        else { result = "wrong"; sfx("wrong"); opts.children[i].classList.add("no"); fb.className = "verdict bad"; fb.innerHTML = "<b>The rune flickers out.</b> " + c.why; nx.textContent = "Continue"; }
-        prog.record(N.key, i === c.a ? "own" : "wrong"); nx.classList.remove("hide"); setTimeout(() => nx.focus({ preventScroll: true }), 50);
+        if (i === c.a) { result = "right"; N.brain.right++; if (N.siege) N.hits++; N.crystal++; S().mats.crystal = (S().mats.crystal || 0) + 1; save.commit(); sfx("correct"); fb.className = "verdict good"; fb.innerHTML = "<b>Yes! The rune glows. +1 💎</b> " + c.why; }
+        else { result = "wrong"; sfx("wrong"); if (N.siege) N.wrong.add(r.key); opts.children[i].classList.add("no"); fb.className = "verdict bad"; fb.innerHTML = "<b>The rune flickers out.</b> " + c.why; nx.textContent = "Continue"; }
+        prog.record(r.key, i === c.a ? "own" : "wrong"); nx.classList.remove("hide"); setTimeout(() => nx.focus({ preventScroll: true }), 50);
       } }, txt)));
       body.append(opts, fb, nx); card.append(body);
       window.__fdq = { type: "brain", obj: c };
+    } else if (N.siege) {
+      // a siege question gets one try, like Algebra Quest's boss fights
+      const q = r.obj; window.__fdq = { type: "own", obj: q };
+      const body = h("div", { class: "card stack pop" }), fb = h("div"), nx = h("button", { class: "btn primary hide", type: "button", onclick: resume }, "✨ Cast the rune");
+      body.append(h("div", { class: "eyebrow" }, label), h("div", { class: "row", style: "justify-content:space-between;align-items:flex-start" }, h("div", { class: "qs", html: q.q }), SayBtn(() => q.q)));
+      if (q.v) body.append(q.v());
+      const done = ok => { nx.classList.remove("hide"); setTimeout(() => nx.focus({ preventScroll: true }), 50); prog.record(r.key, ok ? "own" : "wrong"); };
+      body.append(AnswerBox(q.final.a, q.final.p, () => { result = "right"; N.hits++; sfx("correct"); fb.className = "verdict good"; fb.innerHTML = "<b>Hit! 💥 The rune glows.</b>"; done(true); }, () => {},
+        (f2, ans) => { result = "wrong"; N.wrong.add(r.key); sfx("wrong"); fb.className = "verdict bad"; fb.innerHTML = `<b>The rune flickers out.</b> ${ans != null ? "The answer is " + esc(ans) + ". " : ""}${q.why || ""}`; nx.textContent = "Continue"; done(false); }, { max: 1 }), fb, nx);
+      card.append(body);
     } else {
       const q = r.obj; window.__fdq = { type: "own", obj: q };
-      const qc = QuestionCard(q, "own", res => { prog.record(N.key, res); result = res === "own" ? "right" : res === "help" ? "half" : "wrong"; sfx(result === "wrong" ? "wrong" : "correct"); }, resume);
+      const qc = QuestionCard(q, "own", res => { prog.record(r.key, res); result = res === "own" ? "right" : res === "help" ? "half" : "wrong"; sfx(result === "wrong" ? "wrong" : "correct"); }, resume);
       qc.prepend(h("div", { class: "eyebrow" }, label));
       card.append(qc);
     }
@@ -288,6 +336,7 @@ export function createNight({ stage, fx, fort, island, save, prog, ui, toast, on
     // aim at the demon closest to the keep
     let target = null, bd = Infinity; N.demons.forEach(d => { const v = d.fly ? Math.hypot(d.obj.position.x, d.obj.position.z) : (N.dist.get(K(d.cx, d.cz)) ?? 99); if (v < bd) { bd = v; target = d; } });
     const at = target ? target.obj.position.clone() : new THREE.Vector3(0, 1, 6);
+    if (N.siege && N.lordObj && power >= 1) { const lp = N.lordObj.position; beam(lp.x, lp.z); N.lordHit = 0.5; fx.emit(new THREE.Vector3(lp.x, 3, lp.z), { n: 30, colors: [0xffd23f, 0xffffff, 0x9ff3ff], speed: 5, size: 0.25 }); }
     beam(at.x, at.z); sfx("zap"); setTimeout(() => sfx("cannon"), 120); stage.shake(0.5 * power);
     fx.emit(new THREE.Vector3(at.x, 1.4, at.z), { n: 40, colors: [0x9ff3ff, 0xffffff, 0xffd23f], speed: 6, size: 0.22, life: 1.1 });
     N.demons.slice().forEach(d => { if (Math.hypot(d.obj.position.x - at.x, d.obj.position.z - at.z) <= 4.5 * power + 0.5) damage(d, 9 * power); });
@@ -295,20 +344,21 @@ export function createNight({ stage, fx, fort, island, save, prog, ui, toast, on
     let worst = null; fort.cells.forEach(c => { if (c.maxHp && (c.broken || c.nightHp < c.maxHp) && (!worst || c.nightHp / c.maxHp < worst.nightHp / worst.maxHp)) worst = c; });
     if (worst) { worst.nightHp = worst.maxHp; if (worst.broken) { worst.broken = false; if (worst.obj) worst.obj.scale.set(1, 1, 1); N.dist = distances(); N.demons.forEach(d => (d.next = null)); } sfx("repair"); fx.emit(new THREE.Vector3(worst.gx + 0.5, 1.5, worst.gz + 0.5), { n: 12, colors: [0x5cff7a, 0xffffff], speed: 2.5, grav: -2 }); }
   }
-  function fizzle() {
+  function fizzle(key = N.key) {
     sfx("wrong"); fx.emit(new THREE.Vector3(0, 8.4, 0), { n: 14, colors: [0x666677, 0x999999], speed: 2, size: 0.18 });
     // a wrong answer cracks a wall (a weak spot to fix tomorrow)
     const walls = [...fort.cells.values()].filter(c => (c.t === "wall" || c.t === "gate") && !fort.crackList().some(k => k.cell === K(c.gx, c.gz)));
     const pickWall = walls.length ? walls.sort((a, b) => (a.nightHp / (a.maxHp || 1)) - (b.nightHp / (b.maxHp || 1)) || Math.random() - 0.5)[0] : null;
     const cell = pickWall ? K(pickWall.gx, pickWall.gz) : "keep";
     if (cell === "keep" && fort.crackList().some(k => k.cell === "keep")) return;
-    fort.addCrack(cell, N.key); N.cracks.push(cell); save.commit();
+    fort.addCrack(cell, key); N.cracks.push(cell); save.commit();
     if (pickWall) { pickWall.cracked = true; pickWall.nightHp = Math.min(pickWall.nightHp, pickWall.maxHp * 0.5); N.dist = distances(); N.demons.forEach(d => (d.next = null)); }
-    sfx("crack"); toast(`A ${pickWall ? "wall" : "keep stone"} cracked! You can fix it tomorrow with 2 questions on "${N.tp.t.short}".`);
+    sfx("crack"); toast(`A ${pickWall ? "wall" : "keep stone"} cracked! You can fix it tomorrow with 2 questions on "${(prog.topic(key) || N.tp).t.short}".`);
   }
 
   /* ---------- the end of the night ---------- */
   function finish() {
+    if (N.siege) return finishSiege();
     const r = { key: N.key, kills: N.kills, bumps: N.bumps, gold: N.gold, crystal: N.crystal, cracks: N.cracks.slice(), brain: { ...N.brain } };
     S().gold += N.gold;
     const sc = r.brain.total ? r.brain.right / r.brain.total : 0, prev = S().checks[N.key] || {};
@@ -320,15 +370,30 @@ export function createNight({ stage, fx, fort, island, save, prog, ui, toast, on
     onMorning && onMorning(r);
   }
 
+  function finishSiege() {
+    const won = N.hits >= N.need, prev = S().bosses[N.lordKey] || {};
+    S().bosses[N.lordKey] = { won: !!prev.won || won, best: Math.max(prev.best || 0, N.hits), t: Date.now() };
+    if (N.fin) { S().exams = S().exams || []; S().exams.push({ t: Date.now(), score: N.hits, total: N.runes.length, wrong: [...N.wrong] }); }
+    const r = { siege: true, fin: N.fin, won, lord: N.lord, region: N.region, pack: N.pack, hits: N.hits, need: N.need, total: N.runes.length, wrong: [...N.wrong],
+      kills: N.kills, bumps: N.bumps, gold: N.gold + (won ? (N.fin ? 300 : 100) : 0), crystal: N.crystal, cracks: N.cracks.slice() };
+    S().gold += r.gold;
+    if (!won) r.wrong.forEach(k => { S().repair[k] = true; });
+    save.commit();
+    if (won && N.lordObj) fx.emit(N.lordObj.position.clone().setY(3), { n: 90, colors: [0xffd23f, 0xb388ff, 0xffffff, 0x7cf3ff], speed: 8, size: 0.3, life: 1.6 });
+    stop(true);
+    stage.setMood("dusk"); setTimeout(() => stage.setMood("day"), 900); sfx(won ? "star" : "rooster"); playMusic("day");
+    onMorning && onMorning(r);
+  }
+
   /* ---------- night HUD ---------- */
   let countEl = null, runeBtn = null;
-  function paintCount() { if (countEl && N) countEl.textContent = `👾 ${N.demons.length + N.spawnQ.length}  ·  🌊 ${Math.max(1, N.wave)}/${N.runes.length}`; }
+  function paintCount() { if (countEl && N) countEl.textContent = `👾 ${N.demons.length + N.spawnQ.length}  ·  🌊 ${Math.max(1, N.wave)}/${N.runes.length}` + (N.siege ? `  ·  💥 ${N.hits}/${N.need} hits` : ""); }
   function paintHud() {
     if (!N) return;
     if (!countEl || !countEl.isConnected) {
       countEl = h("span", { class: "chip nightcount", "aria-live": "polite" });
       const leave = h("button", { class: "chip icon", type: "button", "aria-label": "Leave the night", title: "Leave the night", onclick: () => confirmLeave() }, "◀");
-      const title = h("span", { class: "chip nighttitle" }, `🌙 Night of Day ${prog.dayNo(N.key)}: ${N.tp.t.short}`);
+      const title = h("span", { class: "chip nighttitle" }, N.siege ? `⚔️ Siege: ${cap(N.lord.name)}` : `🌙 Night of Day ${prog.dayNo(N.key)}: ${N.tp.t.short}`);
       runeBtn = h("button", { class: "btn runebtn", type: "button", onclick: tapRune }, "✨ Tap the rune!");
       ui.replaceChildren(hud([leave, title]), h("div", { class: "nightbar" }, countEl), h("div", { class: "grow" }), runeBtn);
     }
@@ -344,5 +409,5 @@ export function createNight({ stage, fx, fort, island, save, prog, ui, toast, on
     document.body.append(box);
   }
 
-  return { start, stop, tapRune, get running() { return !!N; }, get state() { return N; }, set timeScale(v) { timeScale = v; } };
+  return { start, startSiege, stop, tapRune, get running() { return !!N; }, get state() { return N; }, set timeScale(v) { timeScale = v; } };
 }

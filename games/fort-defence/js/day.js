@@ -5,6 +5,8 @@ import { h, H, shuffle, pick, esc } from "./qcore.js";
 import { LearnView, QuestionCard, UnderstandCard } from "./qui.js";
 import { sfx } from "./audio.js";
 import { MATS, PIECES } from "./pieces.js";
+import { HEROES, PETS, makeHero, makePet } from "./models.js";
+import { objThumb } from "./thumbs.js";
 
 /* what each kind of answer earns (see the design document) */
 export const LOOT = {
@@ -20,7 +22,7 @@ export const LOOT = {
 const PLANS = Object.keys(PIECES).filter(k => PIECES[k].bp);
 const peek = (type, obj) => { window.__fdq = { type, obj }; };   // lets the automated play-test see the question on screen
 
-export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, onChange, onNight, onFixCrack }) {
+export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, onChange, onNight, onFixCrack, onFixTopic, onHero }) {
   const S = () => save.state;
   let sheet = null, body = null, lootbar = null, ctx = null;
 
@@ -168,7 +170,7 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
     }
     function win() {
       const first = (prog.L(key).stars || 0) < 2; prog.giveStars(key, 2); const nb = []; if (perfect) { const b = prog.award("perfect"); if (b) nb.push(b); }
-      if (repair) { delete S().repair[key]; save.commit(); }
+      if (repair) { delete S().repair[key]; save.commit(); onFixTopic && onFixTopic(key); }
       nb.push(...prog.checkBadges()); sfx("star"); onChange && onChange();
       const mastered = prog.L(key).stars >= 3;
       const after = () => set(celebrate(h("div", { class: "bigstars" }, repair ? "🔧✅" : first ? "⭐⭐" : "🎯"), h("h2", {}, repair ? "Weak spot repaired!" : first ? "Second star!" : "Challenge won!"),
@@ -216,7 +218,34 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
   }
 
   /* ---------- the morning after a night ---------- */
+  /* after a demon lord's siege */
+  function siegeMorning(r) {
+    if (!sheet) mountSheet(); ctx = { key: null, loot: {} };
+    const name = cap(r.lord.name), nb = [];
+    if (r.won) { const b = prog.award(r.lord.badge || (r.fin ? "final" : "")); if (b) nb.push(b); nb.push(...prog.checkBadges()); }
+    const i = prog.road.findIndex(n => (n.t === "lord" || n.t === "final") && n.region === r.region), nxt = prog.road.slice(i + 1).find(n => n.t !== "chest");
+    const nextRegion = nxt && nxt.region && nxt.region !== r.region ? nxt.region : null;
+    head([h("div", { class: "row", style: "justify-content:space-between;align-items:flex-start" }, h("div", {}, h("div", { class: "eyebrow" }, `☀️ Morning · ${r.region.emoji} ${r.region.name}`), h("h2", {}, r.won ? `${name} is beaten!` : `${name} retreats… for now`)), closeBtn()), lootbar]);
+    const st = save.status(); onChange && onChange(); paintLoot();
+    const repairs = r.wrong.filter(k => prog.topic(k)).sort((a, b) => prog.dayNo(a) - prog.dayNo(b));
+    set(celebrate(h("div", { class: "bigstars" }, r.won ? (r.fin ? "🏆" : "🏅") : "🌅"),
+      h("h1", {}, r.won ? (r.fin ? "You beat the Algebra Dragon!" : `You beat ${r.lord.name}!`) : `${r.hits} hits. ${r.need} were needed.`),
+      h("div", { class: "nightstats" },
+        h("span", { class: "lm" }, `💥 ${r.hits} of ${r.total} hits`), h("span", { class: "lm" }, `👾 ${r.kills} defeated`),
+        r.gold ? h("span", { class: "lm" }, `🪙 +${r.gold}`) : null, r.crystal ? h("span", { class: "lm" }, `💎 +${r.crystal}`) : null),
+      r.won ? h("p", { style: "font-weight:800" }, r.fin ? "You are an Algebra Champion. You're ready for the exam." : nextRegion ? `🔓 ${nextRegion.emoji} ${nextRegion.name} is open! Your fort comes with you.` : "🔓 The next part of the quest is open!")
+        : h("p", {}, "The demon lord cracked your walls where you missed. Repair these days (3 right on your own each), then face the lord again:"),
+      !r.won && repairs.length ? h("div", { class: "row", style: "justify-content:center;flex-wrap:wrap;gap:8px" }, ...repairs.map(k => h("span", { class: "lm" }, `🔧 Day ${prog.dayNo(k)}: ${prog.topic(k).t.short}`))) : null,
+      r.won && r.cracks.length ? h("p", { class: "cracknews" }, `💜 ${r.cracks.length} weak spot${r.cracks.length > 1 ? "s" : ""} cracked. Fix ${r.cracks.length > 1 ? "them" : "it"} from the dawn screen with 2 right answers.`) : null,
+      ...nb.map(b => h("p", {}, `🏅 New badge: ${b.e} ${b.n}`)),
+      h("p", { class: "savedok" }, st.mode === "practice" ? "💾 Saved on this device" : "💾 Game saved"),
+      bigbtn(r.won ? "▶ Carry on" : "🔧 Start repairing", () => close("next")),
+      linkbtn("Stop here for today", () => close("stop"))));
+    if (r.won) sfx("star");
+  }
+
   function morning(r) {
+    if (r.siege) return siegeMorning(r);
     const key = r.key, tp = prog.topic(key); if (!sheet) mountSheet(); ctx = { key, loot: {} };
     let up = 0, nb = [], land = null, unlockTxt = "";
     if (r.passed) {
@@ -306,5 +335,29 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
   }
   const open_ = key => { ctx = null; open(key); };
 
-  return { open: open_, openChest, openMap, openRepair, morning, close, grant, get isOpen() { return !!sheet; }, paintLoot };
+  /* the hero shop: gold buys a new look for the commander and a pet. Rewards only: nothing here opens a day. */
+  function openShop() {
+    if (!sheet) mountSheet(); ctx = null;
+    head([h("div", { class: "row", style: "justify-content:space-between;align-items:center" }, h("h2", {}, "🛡️ Hero shop"), closeBtn()), lootbar]); paintLoot();
+    const S_ = S(); S_.owned = S_.owned || ["knight"]; S_.pets = S_.pets || [];
+    const tile = (it, owned, on, buy, wear, pic) => h("div", { class: "shopitem" + (on ? " on" : "") },
+      h("img", { src: pic, alt: "" }), h("b", {}, it.name),
+      on ? h("span", { class: "muted small" }, "✓ Wearing") : owned ? h("button", { class: "btn small", type: "button", onclick: wear }, "Choose")
+        : h("button", { class: "btn small primary", type: "button", disabled: S_.gold < it.price, onclick: buy }, `🪙 ${it.price}`));
+    const buyIt = (list, it, then) => { if (S_.gold < it.price) return; S_.gold -= it.price; list.push(it.id); then(); sfx("star"); toast(`You got the ${it.name}!`); };
+    const paint = () => {
+      const heroes = HEROES.map(it => tile(it, S_.owned.includes(it.id), S_.hero === it.id, () => buyIt(S_.owned, it, () => wearH(it)), () => wearH(it), pics[it.id] || (pics[it.id] = objThumb(makeHero(it.look), 112, true))));
+      const pets = PETS.map(it => tile(it, S_.pets.includes(it.id), S_.pet === it.id, () => buyIt(S_.pets, it, () => wearP(it)), () => wearP(it), pics["p" + it.id] || (pics["p" + it.id] = objThumb(makePet(it.id), 112, true))));
+      set(h("div", { class: "stack" }, h("p", {}, "Spend your gold on a new look for your commander, or a pet to keep him company on the keep. Gold comes from stars, scout reports, demons and demon lords."),
+        h("h3", {}, "Commanders"), h("div", { class: "shopgrid" }, ...heroes),
+        h("h3", {}, "Pets"), h("div", { class: "shopgrid" }, ...pets, S_.pet ? h("button", { class: "link", type: "button", onclick: () => { S_.pet = ""; save.commit(); onHero && onHero(); paint(); } }, "No pet for now") : null)));
+      paintLoot();
+    };
+    const wearH = it => { S_.hero = it.id; save.commit(); onHero && onHero(); paint(); };
+    const wearP = it => { S_.pet = it.id; save.commit(); onHero && onHero(); paint(); };
+    paint();
+  }
+  const pics = {};
+
+  return { open: open_, openChest, openMap, openShop, openRepair, morning, close, grant, get isOpen() { return !!sheet; }, paintLoot };
 }
