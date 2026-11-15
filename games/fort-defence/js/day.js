@@ -20,7 +20,7 @@ export const LOOT = {
 const PLANS = Object.keys(PIECES).filter(k => PIECES[k].bp);
 const peek = (type, obj) => { window.__fdq = { type, obj }; };   // lets the automated play-test see the question on screen
 
-export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, onChange }) {
+export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, onChange, onNight, onFixCrack }) {
   const S = () => save.state;
   let sheet = null, body = null, lootbar = null, ctx = null;
 
@@ -106,7 +106,7 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
     if (ph === "learn") learn(key, o.i || 0, o.back);
     else if (ph === "train") train(key, o.n || 3);
     else if (ph === "challenge") challenge(key, o.replay);
-    else if (ph === "brain") brain(key);
+    else if (ph === "brain") nightPrompt(key);
     else if (ph === "invest") invest(key);
     else donePhase(key);
   }
@@ -171,11 +171,10 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
       if (repair) { delete S().repair[key]; save.commit(); }
       nb.push(...prog.checkBadges()); sfx("star"); onChange && onChange();
       const mastered = prog.L(key).stars >= 3;
-      const goNext = repair ? () => close("repaired") : mastered ? () => open(key) : () => open(key, { ph: "brain" });
       const after = () => set(celebrate(h("div", { class: "bigstars" }, repair ? "🔧✅" : first ? "⭐⭐" : "🎯"), h("h2", {}, repair ? "Weak spot repaired!" : first ? "Second star!" : "Challenge won!"),
-        h("p", {}, repair ? "That wall is strong again. When every weak spot is repaired, you can face the demon lord again." : mastered ? "You already have all 3 stars here. Great practice, and more loot!" : "Last step: the 🧠 Brain check. It checks you understand WHY, not just how."),
+        h("p", {}, repair ? "That wall is strong again. When every weak spot is repaired, you can face the demon lord again." : mastered ? "You already have all 3 stars here. Great practice, and more loot!" : "Tonight the demons attack! Your 🧠 Brain check is in the night's runes: questions about WHY it works. Build your defences first, then face the night."),
         ...nb.map(b => h("p", {}, `🏅 New badge: ${b.e} ${b.n}`)),
-        bigbtn(repair ? "🏰 Back to the fort" : mastered ? "Continue" : "🧠 Start the Brain check", goNext)));
+        ...(repair ? [bigbtn("🏰 Back to the fort", () => close("repaired"))] : mastered ? [bigbtn("Continue", () => open(key))] : nightButtons(key))));
       repair ? after() : riddle(key, after, "💎 Bonus riddle! Crystal for understanding WHY.");
     }
     function lose() {
@@ -186,31 +185,61 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
     set(wrap); next();
   }
 
-  function brain(key) {
-    const T = prog.topic(key).t; const pool = shuffle(T.checks).slice(0, 4); let k = 0, right = 0;
-    const wrap = h("div", { class: "stack" }), area = h("div");
-    function show() {
-      if (k >= pool.length) return end();
-      const c = pool[k]; peek("brain", c); const card = h("div", { class: "card stack pop" });
-      card.append(h("div", { class: "row", style: "justify-content:space-between" }, h("div", { class: "eyebrow" }, `Brain check ${k + 1} of ${pool.length}`)), h("div", { class: "qs" }, c.q));
-      const fb = h("div"), nx = h("button", { class: "btn primary hide", type: "button", onclick: () => { k++; show(); } }, "Next ▸");
-      const opts = h("div", { class: "opts" + (c.c.some(x => x.length > 14) ? " col" : "") });
-      c.c.forEach((t, i) => opts.append(h("button", { class: "opt", type: "button", onclick: () => {
-        opts.querySelectorAll("button").forEach(b => (b.disabled = true)); opts.children[c.a].classList.add("ok");
-        if (i === c.a) { right++; grant(LOOT.brain, card); fb.className = "verdict good"; fb.innerHTML = "<b>Yes!</b> " + c.why; }
-        else { sfx("wrong"); opts.children[i].classList.add("no"); fb.className = "verdict bad"; fb.innerHTML = "<b>Not this time.</b> " + c.why; }
-        nx.classList.remove("hide");
-      } }, t)));
-      card.append(opts, fb, nx); area.replaceChildren(card);
+  const nightButtons = key => [bigbtn("🔨 Build defences", () => { close("build"); onBuild && onBuild(); }, "blue"), bigbtn("🌙 Night falls", () => { close("night"); onNight && onNight(key); })];
+  function nightPrompt(key) {
+    set(celebrate(h("div", { class: "bigstars" }, "🌙"), h("h2", {}, "The night is coming"),
+      h("p", {}, "Your 🧠 Brain check happens tonight: each rune is a question about WHY it works. Get 3 of the 4 right to earn the third star."),
+      ...nightButtons(key), linkbtn("Read the scout's briefing first", () => open(key, { ph: "learn", i: 0, back: "brain" }))));
+  }
+
+  /* ---------- fix a cracked wall: 2 right on your own from that topic ---------- */
+  function openRepair(crack) {
+    const key = crack.topic, tp = prog.topic(key); if (!tp) return;
+    if (!sheet) mountSheet(); ctx = { key, loot: {} };
+    head([h("div", { class: "row", style: "justify-content:space-between;align-items:flex-start" }, h("div", {}, h("div", { class: "eyebrow" }, `🔧 Weak spot · Day ${prog.dayNo(key)}`), h("h2", {}, "Fix the cracked " + (crack.cell === "keep" ? "keep" : "wall"))), closeBtn()), lootbar]);
+    const T = tp.t; let hits = 0, tries = 0; const wrap = h("div", { class: "stack" }), area = h("div"), meter = h("div", { class: "row" });
+    const paint = () => meter.replaceChildren(h("b", {}, "Repairs: "), ...[0, 1].map(i => h("span", { style: "font-size:1.8rem" }, i < hits ? "🧱" : "⚪")));
+    function next() {
+      paint(); if (hits >= 2) return done();
+      tries++;
+      if (!T.gen || !T.gen.length) { hits = 2; return done(); }
+      const q = pick(T.gen)(); peek("own", q); let card;
+      card = QuestionCard(q, "own", r => { prog.record(key, r); if (r === "own") { hits++; grant(LOOT.own, card); } else sfx("wrong"); paint(); }, next);
+      area.replaceChildren(card);
     }
-    function end() {
-      const sc = right / pool.length, prev = S().checks[key] || {}; S().checks[key] = { last: sc, best: Math.max(prev.best || 0, sc), t: Date.now() }; save.commit();
-      if (sc >= 0.75) { prog.giveStars(key, 3); return complete(key); }
-      set(celebrate(h("div", { class: "bigstars" }, "🧠"), h("h2", {}, `${right} out of ${pool.length}. You need 3.`), h("p", {}, "Read the scout's briefing again. The answers are all in there. Then try the Brain check again."),
-        bigbtn("📜 Read the briefing again", () => open(key, { ph: "learn", i: 0, back: "brain" })), linkbtn("Try the Brain check again now", () => open(key, { ph: "brain" }))));
+    function done() {
+      onFixCrack && onFixCrack(crack.cell); sfx("repair");
+      set(celebrate(h("div", { class: "bigstars" }, "🧱✨"), h("h2", {}, "Crack fixed!"), h("p", {}, `Your ${crack.cell === "keep" ? "keep" : "wall"} is strong again. Practising "${T.short}" again is exactly how you remember it.`), bigbtn("🏰 Back to the fort", () => close("fixed"))));
     }
-    wrap.append(mission("🧠 Brain check: 4 questions about WHY it works. Get 3 right to earn the third star and unlock the next day. Each right answer earns crystal."), area);
-    set(wrap); show();
+    wrap.append(mission(`🔧 A wrong answer cracked this ${crack.cell === "keep" ? "keep" : "wall"}. Get 2 right on your own about "${T.short}" to fix it. Demons go for cracks first!`), meter, area);
+    set(wrap); next();
+  }
+
+  /* ---------- the morning after a night ---------- */
+  function morning(r) {
+    const key = r.key, tp = prog.topic(key); if (!sheet) mountSheet(); ctx = { key, loot: {} };
+    let up = 0, nb = [], land = null, unlockTxt = "";
+    if (r.passed) {
+      up = prog.giveStars(key, 3); nb = prog.checkBadges(); land = onLand ? onLand() : null;
+      const i = prog.road.findIndex(n => n.t === "level" && n.key === key); const nxt = prog.road.slice(i + 1).find(n => n.t !== "chest");
+      unlockTxt = !nxt ? "" : nxt.t === "level" ? `🔓 Day ${prog.dayNo(nxt.key)}: ${prog.topic(nxt.key).t.short} is unlocked!` : nxt.t === "lord" ? `👹 ${cap(nxt.region.lord.name)} is gathering his army…` : "🐉 The Final Castle is open!";
+    }
+    paintHead(key, r.passed ? "done" : "brain");
+    head([h("div", { class: "row", style: "justify-content:space-between;align-items:flex-start" }, h("div", {}, h("div", { class: "eyebrow" }, `☀️ Morning · Day ${prog.dayNo(key)}`), h("h2", {}, tp.t.title)), closeBtn()), lootbar]);
+    const st = save.status(); onChange && onChange(); paintLoot();
+    set(celebrate(h("div", { class: "bigstars" }, r.passed ? "⭐⭐⭐" : "🌅"), h("h1", {}, r.passed ? `Day ${prog.dayNo(key)} mastered!` : "You survived the night!"),
+      h("div", { class: "nightstats" },
+        h("span", { class: "lm" }, `👾 ${r.kills} defeated`), r.bumps ? h("span", { class: "lm" }, `🏰 ${r.bumps} reached the keep`) : null,
+        h("span", { class: "lm" }, `🧠 Brain check ${r.brain.right} of ${r.brain.total}`), r.gold ? h("span", { class: "lm" }, `🪙 +${r.gold}`) : null, r.crystal ? h("span", { class: "lm" }, `💎 +${r.crystal}`) : null),
+      r.passed ? h("p", {}, "You can do it on your own AND you know why it works.") : h("p", {}, `The Brain check needs 3 right. Read the scout's briefing again (the answers are all in there), then face the night again.`),
+      r.cracks.length ? h("p", { class: "cracknews" }, `💜 ${r.cracks.length} weak spot${r.cracks.length > 1 ? "s" : ""} cracked. Fix ${r.cracks.length > 1 ? "them" : "it"} from the dawn screen with 2 right answers.`) : null,
+      land ? h("p", { class: "landnews" }, `🚩 New land claimed! Your fort can now be ${land} × ${land} squares.`) : null,
+      unlockTxt ? h("p", { style: "font-weight:800" }, unlockTxt) : null, ...nb.map(b => h("p", {}, `🏅 New badge: ${b.e} ${b.n}`)),
+      h("p", { class: "savedok" }, st.mode === "practice" ? "💾 Saved on this device" : "💾 Game saved"),
+      r.passed ? bigbtn("▶ Next day", () => close("next")) : bigbtn("📜 Read the briefing again", () => open(key, { ph: "learn", i: 0, back: "brain" })),
+      r.passed ? null : bigbtn("🌙 Face the night again", () => { close("night"); onNight && onNight(key); }, "blue"),
+      linkbtn("Stop here for today", () => close("stop"))));
+    sfx(r.passed ? "star" : "rooster");
   }
 
   function invest(key) {
@@ -277,5 +306,5 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
   }
   const open_ = key => { ctx = null; open(key); };
 
-  return { open: open_, openChest, openMap, close, grant, get isOpen() { return !!sheet; }, paintLoot };
+  return { open: open_, openChest, openMap, openRepair, morning, close, grant, get isOpen() { return !!sheet; }, paintLoot };
 }

@@ -40,7 +40,7 @@ export function createFort({ scene, state, region = 1, island, onFrameObjects })
     return c.obj;
   }
   function redrawAround(gx, gz) { [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dz]) => { const n = at(gx + dx, gz + dz); if (n && (n.t === "wall" || n.t === "gate" || n.t === "bridge")) draw(n); }); }
-  function persist() { F().pieces = [...cells.values()].map(c => [c.t, c.gx, c.gz, c.lv]); }
+  function persist() { F().pieces = [...cells.values()].map(c => [c.t, c.gx, c.gz, c.lv]); }   // cracks live in F().cracks
 
   /* ---- what can go where ---- */
   // returns { ok, kind: "place" | "upgrade" | "move", reason }
@@ -57,11 +57,12 @@ export function createFort({ scene, state, region = 1, island, onFrameObjects })
   function place(type, gx, gz, lv = 1) {
     const c = { t: type, gx, gz, lv }; cells.set(key(gx, gz), c); draw(c); redrawAround(gx, gz); persist(); return c;
   }
-  function upgrade(c) { c.lv = Math.min(maxLevel(c.t), c.lv + 1); draw(c); redrawAround(c.gx, c.gz); persist(); return c; }
-  function remove(c) { cells.delete(key(c.gx, c.gz)); if (c.obj) { root.remove(c.obj); onFrameObjects.delete(c.obj); dispose(c.obj); } redrawAround(c.gx, c.gz); persist(); }
+  function upgrade(c) { c.lv = Math.min(maxLevel(c.t), c.lv + 1); draw(c); redrawAround(c.gx, c.gz); persist(); drawCracks(); return c; }
+  function remove(c) { cells.delete(key(c.gx, c.gz)); if (c.obj) { root.remove(c.obj); onFrameObjects.delete(c.obj); dispose(c.obj); } redrawAround(c.gx, c.gz); persist(); drawCracks(); }
   function move(c, gx, gz) {
     cells.delete(key(c.gx, c.gz)); const ox = c.gx, oz = c.gz; c.gx = gx; c.gz = gz; cells.set(key(gx, gz), c);
-    draw(c); redrawAround(ox, oz); redrawAround(gx, gz); persist(); return c;
+    const cr = F().cracks; if (cr && cr[key(ox, oz)]) { cr[key(gx, gz)] = cr[key(ox, oz)]; delete cr[key(ox, oz)]; }   // a crack moves with its wall
+    draw(c); redrawAround(ox, oz); redrawAround(gx, gz); persist(); drawCracks(); return c;
   }
   /* everything spent on a piece, refunded in full when it is picked up */
   function spentOn(c) { const tot = {}; PIECES[c.t].cost.slice(0, c.lv).forEach(cost => Object.entries(cost).forEach(([m, n]) => (tot[m] = (tot[m] || 0) + n))); return tot; }
@@ -69,7 +70,7 @@ export function createFort({ scene, state, region = 1, island, onFrameObjects })
   function load() {
     [...cells.values()].forEach(c => { if (c.obj) { root.remove(c.obj); onFrameObjects.delete(c.obj); dispose(c.obj); } }); cells.clear();
     (F().pieces || []).forEach(([t, gx, gz, lv]) => { if (PIECES[t]) cells.set(key(gx, gz), { t, gx, gz, lv: lv || 1 }); });
-    cells.forEach(draw);
+    cells.forEach(draw); if (typeof drawCracks === "function") drawCracks();
   }
 
   /* ---- land: grid lines and border ---- */
@@ -102,8 +103,35 @@ export function createFort({ scene, state, region = 1, island, onFrameObjects })
     ring.visible = !!range && state !== "bad"; if (range) { ring.scale.setScalar(range); ring.position.set(gx + 0.5, GROUND + 0.04, gz + 0.5); }
   }
 
-  drawLand(); load();
+  /* ---- weak spots: purple cracks on walls, each linked to the topic that caused it ---- */
+  const crackRoot = new THREE.Group(); root.add(crackRoot);
+  const crackMat = new THREE.MeshStandardMaterial({ color: 0xb388ff, emissive: 0x9b5cff, emissiveIntensity: 1.6, roughness: 0.4 });
+  const cracks = () => F().cracks || (F().cracks = {});
+  function drawCracks() {
+    crackRoot.clear();
+    // a crack whose wall was picked up moves to the keep, so it still needs fixing
+    Object.entries(cracks()).forEach(([k, topicKey]) => { if (k !== "keep" && !at(...k.split(",").map(Number))) { delete cracks()[k]; if (!cracks().keep) cracks().keep = topicKey; } });
+    Object.entries(cracks()).forEach(([k, topicKey]) => {
+      const [gx, gz] = k.split(",").map(Number), c = at(gx, gz), onKeep = k === "keep";
+      if (!c && !onKeep) return;
+      const hgt = onKeep ? 3.2 : c.obj ? new THREE.Box3().setFromObject(c.obj).max.y - GROUND : 1;
+      const g = new THREE.Group(); g.position.copy(onKeep ? new THREE.Vector3(0, GROUND, 2.05) : centre(gx, gz));
+      // a zig-zag crack on each side, glowing purple
+      for (let side = 0; side < 4; side++) {
+        const zig = new THREE.Group(); zig.rotation.y = side * Math.PI / 2;
+        for (let i = 0; i < 4; i++) { const seg = new THREE.Mesh(new THREE.BoxGeometry(0.07, Math.min(0.5, hgt / 4.2), 0.04), crackMat); seg.position.set((i % 2 ? 0.08 : -0.08), hgt * (0.15 + i * 0.2), onKeep ? 0 : 0.5); seg.rotation.z = i % 2 ? 0.5 : -0.5; zig.add(seg); }
+        g.add(zig); if (onKeep) break;
+      }
+      g.userData.topic = topicKey; crackRoot.add(g);
+    });
+  }
+  function addCrack(cellKey, topicKey) { cracks()[cellKey] = topicKey; persist(); drawCracks(); }
+  function fixCrack(cellKey) { delete cracks()[cellKey]; persist(); drawCracks(); }
+  const crackList = () => Object.entries(cracks()).map(([cell, topic]) => ({ cell, topic }));
+
+  drawLand(); load(); drawCracks();
   return {
+    addCrack, fixCrack, crackList, drawCracks, crackRoot,
     root, cells, check, place, upgrade, remove, move, spentOn, load, at, centre, highlight, showGrid, redrawLand: drawLand,
     get half() { return half; }, inLand, inKeep,
     count: () => cells.size,

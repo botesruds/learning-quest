@@ -194,3 +194,7 @@
 .sheet .qtile.lord .z{color:#7c4dff}
 .sheet .qtile.done{border-color:#9bd59b}
 body.sheet-open #ui{display:none}
+.sheet .nightstats{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0}
+.sheet .nightstats>*{flex:1 1 120px;background:#f3eefe;border:2px solid #d9cbff;border-radius:14px;padding:10px 12px;text-align:center;font:600 16px var(--f-body)}
+.sheet .nightstats b{display:block;font:28px var(--f-game);color:#4b2bb3}
+.sheet .cracknews{background:#f6edff;border-left:5px solid #9b59ff;border-radius:10px;padding:10px 14px;color:#4a2a7a;font-weight:600}

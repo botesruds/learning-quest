@@ -6,6 +6,7 @@ import { unlockAudio, sfx, playMusic, stopMusic, setSfx, setMusic, SFX_NAMES } f
 import { createFort, claimedHalf } from "./fort.js";
 import { createProgress } from "./progress.js";
 import { createDay } from "./day.js";
+import { createNight } from "./night.js";
 import { MATS, PIECES } from "./pieces.js";
 import { createBuilder } from "./builder.js";
 
@@ -29,7 +30,7 @@ const live = new Set();                           // objects with their own upda
 stage.onFrame((dt, t) => live.forEach(o => o.userData.update && o.userData.update(dt, t)));
 const addLive = o => { if (o.userData.update) live.add(o); scene.add(o); return o; };
 
-let island = null, fort = null, builder = null, prog = null, day = null;
+let island = null, fort = null, builder = null, prog = null, day = null, night = null;
 function buildWorld(region = 1) {
   const L = REGION_LOOK[region];
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -48,7 +49,7 @@ function buildWorld(region = 1) {
   islet.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(3, 3.4, 1.2, 8), new THREE.MeshStandardMaterial({ color: 0x6f6a8a, flatShading: true })), { receiveShadow: true }));
   islet.children[2].position.y = -0.2; scene.add(islet);
   [["imp", -0.8, 0.4], ["bat", 0.4, -0.6], ["imp", 1.5, 0.9]].forEach(([k, x, z]) => { const d = addLive(makeDemon(k)); d.position.set(islet.position.x + x, 0.45, islet.position.z + z); d.lookAt(0, 0.45, 0); });
-  for (let i = 0; i < 8; i++) { const c = makeCloud(rnd); c.position.set((rnd() - 0.5) * 140, 18 + rnd() * 10, (rnd() - 0.5) * 140); c.userData.update = (dt) => { c.position.x += dt * 0.8; if (c.position.x > 80) c.position.x = -80; }; addLive(c); }
+  for (let i = 0; i < 8; i++) { const c = makeCloud(rnd); c.position.set((rnd() - 0.5) * 160, 42 + rnd() * 8, (rnd() - 0.5) * 160); c.userData.update = (dt) => { c.position.x += dt * 0.8; if (c.position.x > 80) c.position.x = -80; }; addLive(c); }
 }
 buildWorld(1);
 const TITLE_VIEW = { yaw: 0.7, pitch: 0.5, dist: isTouch ? 52 : 46, target: new THREE.Vector3(0, 2, 0) };
@@ -114,7 +115,11 @@ function dawnScreen() {
   stage.setShift(0, 0); rig.autoSpin = 0.03; stage.flyTo(DAWN_VIEW, 1.4);
   const cur = prog.currentNode();
   let main, sub = "";
-  if (cur.t === "level") {
+  if (cur.t === "level" && !cur.repair && prog.nextPhase(cur.key) === "brain") {
+    const tp = prog.topic(cur.key);
+    main = h("button", { class: "btn pulse go-day night", type: "button", onclick: () => startNight(cur.key) }, `🌙 Night of Day ${prog.dayNo(cur.key)}: ${tp.t.short}`);
+    sub = "⭐⭐ so far. Build your defences, then face the night. The Brain check is in the runes.";
+  } else if (cur.t === "level") {
     const tp = prog.topic(cur.key), st = prog.stars(cur.key);
     main = h("button", { class: "btn pulse go-day", type: "button", onclick: () => { sfx("whoosh"); day.open(cur.key); } }, cur.repair ? `🔧 Repair: ${tp.t.short}` : `☀️ Day ${prog.dayNo(cur.key)}: ${tp.t.short}`);
     sub = cur.repair ? "A demon lord found a weak spot. Fix it to make the wall strong again." : `${tp.region ? tp.region.emoji + " " + tp.region.name + " · " : ""}${st ? "⭐".repeat(st) + " so far" : "A new day"}`;
@@ -124,15 +129,23 @@ function dawnScreen() {
     sub = "Every day in this region is mastered. The demon lord is coming!";
   }
   const chest = prog.road.find(n => n.t === "chest" && !prog.nodeDone(n) && n.region === (cur.region || {}));
+  const crack = fort.crackList()[0];
   const back = h("button", { class: "chip icon", type: "button", "aria-label": "Back to the title", title: "Back", onclick: () => { sfx("click"); stage.flyTo(TITLE_VIEW, 1.4); setTimeout(() => (rig.autoSpin = 0.05), 1400); stopMusic(); setTimeout(() => playMusic("title"), 300); titleScreen(); } }, "◀");
   const card = h("div", { class: "dawn panel fade-in" },
     h("p", { class: "dsub" }, sub), main,
     h("div", { class: "drow" },
       h("button", { class: "btn small blue", type: "button", onclick: () => { sfx("click"); rig.autoSpin = 0; stage.flyTo(BUILD_VIEW, 1.2); buildScreen(); } }, "🔨 Build"),
       h("button", { class: "btn small plain", type: "button", onclick: () => { sfx("click"); day.openMap(); } }, "📜 Quest map"),
-      chest ? h("button", { class: "btn small gold", type: "button", onclick: () => { sfx("click"); day.openChest(chest.pack, chest.region); } }, "🎁 New scout report") : null));
+      chest ? h("button", { class: "btn small gold", type: "button", onclick: () => { sfx("click"); day.openChest(chest.pack, chest.region); } }, "🎁 New scout report") : null,
+      crack ? h("button", { class: "btn small crackbtn", type: "button", onclick: () => { sfx("click"); day.openRepair(crack); } }, `🔧 Fix a crack (${fort.crackList().length})`) : null));
   ui.replaceChildren(hud([back]), matsChips(), h("div", { class: "grow" }), card);
   setTimeout(() => main.focus({ preventScroll: true }), 60);
+}
+
+/* night falls */
+function startNight(key) {
+  if (builder) builder.unmount(); if (day && day.isOpen) day.close("nav");
+  night.start(key);
 }
 
 /* after a day: did he claim more land? */
@@ -148,7 +161,9 @@ function buildScreen() {
   const done = h("button", { class: "chip", type: "button", onclick: () => { sfx("click"); dawnScreen(); } }, "✓ Done building");
   const spin = h("button", { class: "chip icon", type: "button", "aria-label": "Turn the view", title: "Turn the view", onclick: () => { sfx("whoosh"); stage.flyTo({ yaw: rig.yaw + Math.PI / 2 }, 0.7); } }, "↻");
   const mission = h("div", { class: "mission fade-in" }, h("b", {}, "Build your fort! "), "Drag pieces onto the grass. Drop a piece on the same piece to upgrade it.");
-  ui.replaceChildren(hud([back, spin, done]), mats, mission, h("div", { class: "grow" }), tray);
+  const cur = prog.currentNode(), pending = cur.t === "level" && !cur.repair && prog.nextPhase(cur.key) === "brain";
+  const nightBtn = pending ? h("button", { class: "chip nightchip", type: "button", onclick: () => startNight(cur.key) }, "🌙 Night falls") : null;
+  ui.replaceChildren(hud([back, spin, nightBtn || done]), mats, mission, h("div", { class: "grow" }), tray);
   const lift = () => { if (tray.isConnected) stage.setShift(tray.getBoundingClientRect().height * 0.45); };
   requestAnimationFrame(lift); addEventListener("resize", lift);
 }
@@ -207,10 +222,13 @@ function demoFort() {
   prog = createProgress(S, () => save.commit());
   day = createDay({ save, prog, stage, toast, onLand: landCheck,
     onBuild: () => { rig.autoSpin = 0; stage.flyTo(BUILD_VIEW, 1.2); buildScreen(); },
-    onClose: why => { if (why !== "build" && why !== "nav") dawnScreen(); } });
+    onNight: key => startNight(key),
+    onFixCrack: cell => { fort.fixCrack(cell); save.commit(); },
+    onClose: why => { if (why === "stop") { stopMusic(); stage.flyTo(TITLE_VIEW, 1.4); setTimeout(() => (rig.autoSpin = 0.05), 1400); titleScreen(); toast("Great work today, Commander. Your fort is saved and waiting."); } else if (why !== "build" && why !== "nav" && why !== "night") dawnScreen(); } });
+  night = createNight({ stage, fx, fort, island, save, prog, ui, toast, hud, onMorning: r => day.morning(r), onLeave: () => { playMusic("day"); dawnScreen(); } });
   titleScreen();
   const wake = () => { if (unlockAudio() && S().music && !builder.selected) playMusic("title"); removeEventListener("pointerdown", wake); };
   addEventListener("pointerdown", wake);
   if (DEV) bench();
-  window.__fd = { stage, save, fx, fort, builder, prog, day, THREE, dawnScreen };
+  window.__fd = { stage, save, fx, fort, builder, prog, day, night, THREE, dawnScreen, startNight, demoFort };
 })();

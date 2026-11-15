@@ -1,3 +1,4 @@
+const path=require('path');
 const {chromium,devices}=require('playwright');const {serve}=require('./mock');
 const ARGS={args:['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']};
 const log=(...a)=>console.log(...a);
@@ -9,7 +10,7 @@ const ANSWER=`(function(spec, root, wrong){
   const v= wrong? '999' : 'num' in spec? String(spec.num) : 'expr' in spec? spec.expr : 'words' in spec? spec.words[0] : '?';
   fill(inp,v); return v;
 })`;
-(async()=>{ const srv=await serve(require('path').resolve(__dirname,'../../..'),8845); const b=await chromium.launch(ARGS);
+(async()=>{ const srv=await serve(path.resolve(__dirname,'../../..'),8845); const b=await chromium.launch(ARGS);
  const ctx=await b.newContext({viewport:{width:1280,height:800}}); const p=await ctx.newPage(); const errs=[]; p.on('pageerror',e=>errs.push('PAGEERR '+e.message)); p.on('console',m=>{ if(m.type()==='error') errs.push(m.text()); });
  const wf=(fn,arg,t=20000)=>p.waitForFunction(fn,arg,{timeout:t}).then(()=>true).catch(()=>false);
  const q=()=>p.evaluate(()=>window.__fdq);
@@ -46,15 +47,10 @@ const ANSWER=`(function(spec, root, wrong){
  for(let n=0;n<3;n++){ const Q=(await q()).obj; await p.evaluate(([A,spec])=>eval(A)(spec,document.querySelector('.sheet .card')),[ANSWER,Q.final.a]); await p.waitForTimeout(200); await nextQ(); await p.waitForTimeout(200); }
  log('5 challenge stars:', await p.evaluate(()=>__fd.prog.stars('1')), 'plans', await p.evaluate(()=>JSON.stringify(__fd.save.state.blueprints)), 'riddle?', (await q()).type);
  log('   bonus riddle', await doRiddle());
- await clickText('Start the Brain check');
- // make day 2 and 3 already mastered, so finishing day 1 claims new land (3 topics mastered)
- await p.evaluate(()=>{ const S=__fd.save.state; S.lv['2']={stars:3,train:true}; S.lv['3']={stars:3,train:true}; });
- for(let n=0;n<4;n++){ const c=(await q()).obj; await p.locator('.sheet .opts button').nth(n===1?(c.a+1)%c.c.length:c.a).click(); await p.waitForTimeout(150); await p.locator('.sheet button.btn.primary:not(.hide)',{hasText:'Next'}).click(); await p.waitForTimeout(150); }
- await p.waitForSelector('.sheet .celebrate h1'); log('6 complete:', await p.locator('.sheet .celebrate h1').textContent(), '| land:', await p.locator('.landnews').textContent().catch(()=>'none'), '| loot:', await p.locator('.lootsum').textContent().catch(()=>''));
- log('   mats', mats0, '->', await p.evaluate(()=>JSON.stringify(__fd.save.state.mats)), 'fort half', await p.evaluate(()=>__fd.fort.half));
+ log('6 night buttons:', (await p.locator('.sheet .bigbtn').allTextContents()).join(' | '), '| mats', mats0, '->', await p.evaluate(()=>JSON.stringify(__fd.save.state.mats)));
  await p.waitForTimeout(1500); await p.screenshot({path:'st4-complete.png'});
- await clickText('Build with your loot'); await p.waitForSelector('.tray .item'); log('7 build screen after the day:', await p.locator('.tray').count());
- await p.click('text=✓ Done building'); await p.waitForSelector('.dawn .go-day'); log('8 dawn now says:', await p.locator('.go-day').textContent());
+ await clickText('Build defences'); await p.waitForSelector('.tray .item'); log('7 build screen after the day:', await p.locator('.tray').count(), '| night button there:', await p.locator('button',{hasText:'Night falls'}).count());
+ await p.click('[aria-label="Finish building"]'); await p.waitForSelector('.dawn .go-day'); log('8 dawn now says:', await p.locator('.go-day').textContent());
  // ---- quest map ----
  await p.click('text=📜 Quest map'); await p.waitForSelector('.qtile'); await p.screenshot({path:'st4-map.png'});
  log('9 map tile 1:', await p.locator('.qtile').nth(1).textContent(), '| tile 6 locked:', await p.locator('.qtile').nth(6).evaluate(e=>e.classList.contains('locked')));
