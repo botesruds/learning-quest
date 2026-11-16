@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="en-GB">
 <head>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Algebra Quest</title>
@@ -235,6 +237,7 @@ button.pillstat{cursor:pointer}
 .world h2{color:var(--wc);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .world .wsub{font-size:.9rem;color:var(--muted);margin:2px 0 6px}
 .mapsvg{width:100%;height:auto;display:block}
+.mapsvg .node{cursor:pointer}
 .node{cursor:pointer}
 .node:focus{outline:none}
 .node:focus-visible circle.ring{stroke:var(--accent);stroke-width:5}
@@ -1666,9 +1669,11 @@ function roadSVG(nodes,cur){
     const fill= !open?"var(--surface-2)": done?"color-mix(in srgb,var(--wc) 75%,var(--surface))": isCur?"var(--good)":"var(--surface)";
     const stroke= rep?"var(--warn)": isCur?"var(--good)": open?"var(--wc)":"var(--line)";
     const txtCol= done||isCur?"#fff":"var(--ink)";
-    let s=`<g ${isCur?`class="pulse" style="transform-origin:${p.x}px ${p.y}px"`:""}><circle class="ring" cx="${p.x}" cy="${p.y}" r="${r}" style="fill:${fill};stroke:${stroke};stroke-width:${isCur?6:4}"/>`;
-    s+=`<text x="${p.x}" y="${p.y+1}" text-anchor="middle" dominant-baseline="central" style="font-family:var(--f-display);font-weight:800;font-size:${/^\d+$/.test(icon)?24:big?32:26}px;fill:${txtCol}">${icon}</text></g>`;
     const side=p.x>W*0.6?-1:1, lx=p.x+side*(r+12);
+    const hx0=Math.max(0,side>0?p.x-r-6:p.x-r-250), hx1=Math.min(W,side>0?p.x+r+250:p.x+r+6);
+    let s=`<rect class="hit" x="${hx0}" y="${p.y-r-6}" width="${hx1-hx0}" height="${2*r+12}" rx="16" style="fill:transparent;pointer-events:all"/>`;
+    s+=`<g ${isCur?`class="pulse" style="transform-origin:${p.x}px ${p.y}px"`:""}><circle class="ring" cx="${p.x}" cy="${p.y}" r="${r}" style="fill:${fill};stroke:${stroke};stroke-width:${isCur?6:4}"/>`;
+    s+=`<text x="${p.x}" y="${p.y+1}" text-anchor="middle" dominant-baseline="central" style="font-family:var(--f-display);font-weight:800;font-size:${/^\d+$/.test(icon)?24:big?32:26}px;fill:${txtCol}">${icon}</text></g>`;
     s+=`<text x="${lx}" y="${p.y-6}" text-anchor="${side>0?"start":"end"}" style="font-family:var(--f-body);font-weight:700;font-size:17px;fill:var(--ink)">${esc(label)}</text>`;
     if(n.t==="level"){ const st=stars(n.id); s+=`<text x="${lx}" y="${p.y+17}" text-anchor="${side>0?"start":"end"}" style="font-size:16px">${rep?"🔧 needs repair":[0,1,2].map(k=>k<st?"⭐":"☆").join("")}</text>`; }
     else s+=`<text x="${lx}" y="${p.y+16}" text-anchor="${side>0?"start":"end"}" style="font-size:14px;fill:var(--muted)">${esc(sub)}</text>`;

@@ -16,3 +16,9 @@ private schema `learning`, reached only through the `fl_*` functions, which need
 4. Add the game to `catalog.js` and redeploy.
 
 Only a nickname and game progress are stored. The site is not indexed (robots.txt + X-Robots-Tag).
+
+## Fort Defence (in development)
+`games/fort-defence/` is the Fort Defence rebuild of Algebra Quest (Three.js bundled in `vendor/`, no build step).
+It saves under game id `fort-defence` and copies Algebra Quest progress once, read only.
+Without the family connection (or with `?practice`) it uses a practice save on that device only. `?dev` shows a test bench.
+It is not in `catalog.js` yet, so the home page still opens Algebra Quest.
