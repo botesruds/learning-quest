@@ -362,5 +362,54 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
   }
   const pics = {};
 
-  return { open: open_, openChest, openMap, openShop, openRepair, morning, close, grant, get isOpen() { return !!sheet; }, paintLoot };
+  /* ---------- parent corner: behind a grown-up sum, like Algebra Quest ---------- */
+  function openParentGate() {
+    if (!sheet) mountSheet(); ctx = null;
+    const a = 11 + Math.floor(Math.random() * 9), b = 11 + Math.floor(Math.random() * 9);
+    head([h("div", { class: "row", style: "justify-content:space-between;align-items:center" }, h("h2", {}, "⚙️ For grown-ups"), closeBtn("✕ Back"))]);
+    const inp = h("input", { class: "ans", type: "text", inputmode: "numeric", "aria-label": "Answer" });
+    const go = () => { if (Number(String(inp.value).replace(/\s/g, "")) === a * b) openParent(); else { inp.classList.add("no"); sfx("wrong"); } };
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") go(); }); inp.addEventListener("input", () => inp.classList.remove("no"));
+    set(h("div", { class: "stack" }, h("p", {}, `To open the parent corner, work out ${a} × ${b}.`), h("div", { class: "row", style: "gap:8px;flex-wrap:wrap" }, inp, h("button", { class: "btn primary", type: "button", onclick: go }, "Open"))));
+    setTimeout(() => inp.focus(), 30);
+  }
+  const dotKind = r => r === "own" ? "own" : /st/.test(r) ? "stp" : /h/.test(r) ? "hlp" : "bad";
+  const dots = key => h("span", { class: "rdots", title: "Most recent answers, newest on the right" }, ...(S().hist[key] || []).slice(-8).map(x => h("i", { class: dotKind(x.r) })));
+  const when = t => new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  function openParent() {
+    if (!sheet) mountSheet(); ctx = null;
+    head([h("div", { class: "row", style: "justify-content:space-between;align-items:center" }, h("h2", {}, "⚙️ Parent corner"), closeBtn("✕ Back to the game"))]);
+    const paint = () => {
+      const parts = [h("div", { class: "card small pc-how" }, h("b", {}, "How progress is earned"),
+        h("p", {}, "Each day is one topic. ⭐ 1: the briefing and 3 step-by-step questions. ⭐ 2: 3 right on his own before 3 misses. ⭐ 3: the Brain check at night, 3 of 4 'why' questions right. The next day only opens at 3 stars."),
+        h("p", {}, "Each land ends with a demon lord: 8 quick questions plus 2 'why' questions, 8 hits to win. Every miss marks that day for repair, and he must pass its Challenge again before the rematch. The next land only opens after the lord is beaten. The Algebra Dragon is the practice exam (13 of 16)."),
+        h("p", { class: "row", style: "gap:6px;flex-wrap:wrap;align-items:center" }, "Recent answers: ", h("span", { class: "rdots" }, h("i", { class: "own" })), "on his own ", h("span", { class: "rdots" }, h("i", { class: "stp" })), "with steps ", h("span", { class: "rdots" }, h("i", { class: "hlp" })), "second try ", h("span", { class: "rdots" }, h("i", { class: "bad" })), "wrong"))];
+      prog.regions.forEach(({ pack, r }) => {
+        const rows = prog.road.filter(n => n.pack === pack && n.region === r && n.t === "level").map(n => {
+          const tp = prog.topic(n.key), st = prog.stars(n.key), rep = S().repair[n.key], seen = S().last[n.key];
+          return h("div", { class: "pc-row" }, h("b", { class: "pc-day" }, String(prog.dayNo(n.key))),
+            h("div", { class: "pc-t" }, h("b", {}, tp.t.title), h("div", { class: "small muted" }, rep ? "🔧 Marked for repair by a demon lord" : seen ? "Last practised " + when(seen) : "Not started")),
+            h("span", { class: "pc-st", "aria-label": st + " stars" }, "⭐".repeat(st) + "☆".repeat(3 - st)), dots(n.key));
+        });
+        const ck = prog.chestKey(pack, r), cb = h("input", { type: "checkbox" }); cb.checked = !!S().classNow[ck];
+        cb.addEventListener("change", () => { S().classNow[ck] = cb.checked; save.commit(); onChange && onChange(); });
+        const lk = r.final ? "final" : prog.lordKey(pack, r), bs = S().bosses[lk], lord = r.final || r.lord;
+        parts.push(h("section", { class: "stack pc-region" }, h("div", { class: "row", style: "justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap" }, h("h3", {}, `${r.emoji} ${r.name}`),
+          h("label", { class: "pc-check" }, cb, "Open this land now (class is doing it)")), ...rows,
+          lord ? h("p", { class: "small" }, `${r.final ? "🐉" : "👹"} ${cap(lord.name)}: ${bs ? (bs.won ? "beaten" : "not beaten yet") + `, best ${bs.best} hits` : "not faced yet"}`) : null));
+      });
+      const ex = S().exams || [];
+      if (ex.length) parts.push(h("div", { class: "card small" }, h("b", {}, "Practice exam (Algebra Dragon) attempts"), h("p", {}, ex.slice(-6).map(e => `${when(e.t)}: ${e.score}/${e.total}`).join(" · "))));
+      let armed = false;
+      const ub = h("button", { class: "btn small", type: "button", onclick: () => { if (S().unlockAll) { S().unlockAll = false; save.commit(); onChange && onChange(); paint(); return; } if (!armed) { armed = true; ub.textContent = "Tap again to open every day"; return; } S().unlockAll = true; save.commit(); onChange && onChange(); paint(); } }, S().unlockAll ? "Lock days to mastery again" : "Open every day");
+      const st = save.status();
+      parts.push(h("div", { class: "card small stack" }, h("b", {}, "Settings"), h("div", {}, ub),
+        h("p", { class: "small muted" }, "Opening every day skips the mastery lock. Use it only if he needs to jump ahead for class. Demon lords still need their 8 hits."),
+        h("p", { class: "small muted" }, st.mode === "practice" ? "This is a practice save: it stays on this device only." : "Progress saves online automatically for this player.")));
+      set(h("div", { class: "stack" }, ...parts));
+    };
+    paint();
+  }
+
+  return { open: open_, openChest, openMap, openShop, openParentGate, openParent, openRepair, morning, close, grant, get isOpen() { return !!sheet; }, paintLoot };
 }

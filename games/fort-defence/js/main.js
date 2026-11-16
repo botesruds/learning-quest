@@ -80,7 +80,7 @@ function scenery(region) {
   });
 }
 /* each region has its own land, its own fort and its own building style. Materials, gold and plans travel with him. */
-let visiting = null;                                    // a region number when he is visiting an older fort
+let visiting = null, inGame = false, afterParent = null;                                    // a region number when he is visiting an older fort
 const regionShown = () => visiting || regionNow();
 function showRegion(r) {
   setLook(r);
@@ -123,7 +123,8 @@ function hud(extra = []) {
   const home = h("a", { class: "chip icon", href: window.Family && Family.hasKey ? Family.link("../../") : "../../", "aria-label": "All subjects", title: "All subjects" }, "🏠");
   saveEl = h("button", { class: "chip", type: "button", title: "Save", onclick: () => { save.saveNow(); toast(save.practice ? "Practice save: kept on this device only." : "Saved. 💾"); } }, h("span", { class: "save-dot" }), h("span", { class: "lbl" }, ""));
   const snd = h("button", { class: "chip icon", type: "button", "aria-label": "Sound on or off", title: "Sound", onclick: () => { const on = !S().sound; S().sound = on; S().music = on; setSfx(on); setMusic(on); save.commit(); snd.textContent = on ? "🔊" : "🔇"; if (on) { unlockAudio(); sfx("click"); } } }, S().sound ? "🔊" : "🔇");
-  const bar = h("div", { class: "hud" }, home, ...extra, h("span", { class: "sp" }), saveEl, snd);
+  const gear = h("button", { class: "chip icon", type: "button", "aria-label": "For grown-ups", title: "For grown-ups", onclick: () => { if (night && night.running) { toast("Finish the night first, then open the parent corner."); return; } if (builder) builder.unmount(); sfx("click"); afterParent = inGame ? "dawn" : "title"; day && day.openParentGate(); } }, "⚙️");
+  const bar = h("div", { class: "hud" }, home, ...extra, h("span", { class: "sp" }), saveEl, snd, gear);
   paintSave();
   return bar;
 }
@@ -144,6 +145,7 @@ function titleScreen() {
 }
 
 function startGame() {
+  inGame = true;
   unlockAudio(); setSfx(S().sound); setMusic(S().music);
   sfx("whoosh"); playMusic("day");
   if (!S().startedAt) { S().startedAt = Date.now(); save.commit(); }
@@ -301,7 +303,7 @@ function demoFort() {
     onHero: () => dressHero(),
     onVisit: r => visitFort(r),
     onFixTopic: key => { fort.crackList().filter(c => c.topic === key).forEach(c => fort.fixCrack(c.cell)); save.commit(); },
-    onClose: why => { if (why === "stop") { stopMusic(); stage.flyTo(TITLE_VIEW, 1.4); setTimeout(() => (rig.autoSpin = 0.05), 1400); titleScreen(); toast("Great work today, Commander. Your fort is saved and waiting."); } else if (why !== "build" && why !== "nav" && why !== "night") dawnScreen(); } });
+    onClose: why => { if (why === "stop") { stopMusic(); stage.flyTo(TITLE_VIEW, 1.4); setTimeout(() => (rig.autoSpin = 0.05), 1400); titleScreen(); toast("Great work today, Commander. Your fort is saved and waiting."); } else if (afterParent) { const w = afterParent; afterParent = null; if (w === "title") titleScreen(); else dawnScreen(); } else if (why !== "build" && why !== "nav" && why !== "night") dawnScreen(); } });
   night = createNight({ stage, fx, fort, island, save, prog, ui, toast, hud, onMorning: r => day.morning(r), onLeave: () => { playMusic("day"); dawnScreen(); } });
   showRegion(regionNow());
   titleScreen();

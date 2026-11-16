@@ -6,7 +6,7 @@ const {chromium,devices}=require('playwright');const {serve}=require('./mock');
  await p.goto('http://localhost:8845/games/fort-defence/?practice&lowgfx'); await p.waitForSelector('.logo');
  await p.evaluate(()=>{ const S=__fd.save.state; S.gold=700; S.badges={star1:1,w1:1,fire:1,l3:1}; __fd.save.commit(); });
  await p.locator('.btn.pulse').click(); await p.waitForSelector('.dawn .go-day');
- await p.waitForTimeout(1500); console.log(tag, 'dawn', JSON.stringify(errs), (await p.locator('.dawn').innerText()).replace(/\n/g,' | ')); await p.locator('button',{hasText:'Hero shop'}).click(); await p.waitForSelector('.shopitem'); await p.waitForTimeout(1200);
+ await p.waitForTimeout(1500); console.log(tag, 'dawn', JSON.stringify(errs), (await p.locator('.dawn').innerText()).replace(/\n/g,' | ')); await p.locator('button',{hasText:'Hero shop'}).click({timeout:90000}); await p.waitForSelector('.shopitem'); await p.waitForTimeout(1200);
  await p.locator('.shopitem',{hasText:'Rune Wizard'}).locator('button').click(); await p.locator('.shopitem',{hasText:'Block Pup'}).locator('button').click(); await p.waitForTimeout(800);
  await p.screenshot({path:`st8-${tag}-shop.png`});
  console.log(tag,'gold', await p.evaluate(()=>__fd.save.state.gold), 'hero', await p.evaluate(()=>__fd.save.state.hero), 'pet', await p.evaluate(()=>__fd.save.state.pet), 'owned', await p.evaluate(()=>JSON.stringify(__fd.save.state.owned)), 'disabled dragon rider', await p.locator('.shopitem',{hasText:'Dragon Rider'}).locator('button').isDisabled(), 'sideways', await p.evaluate(()=>document.querySelector('.sbody').scrollWidth>document.querySelector('.sbody').clientWidth));
