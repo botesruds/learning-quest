@@ -309,6 +309,6 @@ function demoFort() {
   titleScreen();
   const wake = () => { if (unlockAudio() && S().music && !builder.selected) playMusic("title"); removeEventListener("pointerdown", wake); };
   addEventListener("pointerdown", wake);
-  if (DEV) bench();
+  if (DEV && save.practice) bench();   // the test bench never touches a real save
   window.__fd = { stage, save, fx, fort, builder, prog, day, night, THREE, dawnScreen, startNight, startSiege, demoFort, setLook, dressHero, showRegion, visitFort };
 })();
