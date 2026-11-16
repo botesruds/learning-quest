@@ -22,7 +22,7 @@ export const LOOT = {
 const PLANS = Object.keys(PIECES).filter(k => PIECES[k].bp);
 const peek = (type, obj) => { window.__fdq = { type, obj }; };   // lets the automated play-test see the question on screen
 
-export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, onChange, onNight, onFixCrack, onFixTopic, onHero }) {
+export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, onChange, onNight, onFixCrack, onFixTopic, onHero, onVisit }) {
   const S = () => save.state;
   let sheet = null, body = null, lootbar = null, ctx = null;
 
@@ -233,7 +233,7 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
       h("div", { class: "nightstats" },
         h("span", { class: "lm" }, `💥 ${r.hits} of ${r.total} hits`), h("span", { class: "lm" }, `👾 ${r.kills} defeated`),
         r.gold ? h("span", { class: "lm" }, `🪙 +${r.gold}`) : null, r.crystal ? h("span", { class: "lm" }, `💎 +${r.crystal}`) : null),
-      r.won ? h("p", { style: "font-weight:800" }, r.fin ? "You are an Algebra Champion. You're ready for the exam." : nextRegion ? `🔓 ${nextRegion.emoji} ${nextRegion.name} is open! Your fort comes with you.` : "🔓 The next part of the quest is open!")
+      r.won ? h("p", { style: "font-weight:800" }, r.fin ? "You are an Algebra Champion. You're ready for the exam." : nextRegion ? `🔓 ${nextRegion.emoji} ${nextRegion.name} is open! Build a new fort there in a new style. Your materials, gold and plans come with you, and your ${r.region.name} fort stays just as you built it.` : "🔓 The next part of the quest is open!")
         : h("p", {}, "The demon lord cracked your walls where you missed. Repair these days (3 right on your own each), then face the lord again:"),
       !r.won && repairs.length ? h("div", { class: "row", style: "justify-content:center;flex-wrap:wrap;gap:8px" }, ...repairs.map(k => h("span", { class: "lm" }, `🔧 Day ${prog.dayNo(k)}: ${prog.topic(k).t.short}`))) : null,
       r.won && r.cracks.length ? h("p", { class: "cracknews" }, `💜 ${r.cracks.length} weak spot${r.cracks.length > 1 ? "s" : ""} cracked. Fix ${r.cracks.length > 1 ? "them" : "it"} from the dawn screen with 2 right answers.`) : null,
@@ -326,10 +326,13 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
             onclick: () => { if (!open) { sfx("wrong"); toast("Get 3 stars on the day before to open this one."); return; } sfx("click"); open_(n.key); } },
             h("span", { class: "z" }, String(prog.dayNo(n.key))), h("span", { class: "nm" }, tp.t.short), h("span", { class: "st" }, rep ? "🔧 repair" : "⭐".repeat(st) + "☆".repeat(3 - st))); }
         const lord = n.t === "lord" ? r.lord : r.final;
-        return h("button", { class: "qtile lord" + (open ? "" : " locked") + (done ? " done" : ""), type: "button", onclick: () => toast(open ? `${cap(lord.name)} arrives in a later stage of this build.` : "Master every day in this region first.") }, h("span", { class: "z" }, n.t === "final" ? "🐉" : "👹"), h("span", { class: "nm" }, cap(lord.name)), h("span", { class: "kind" }, done ? "beaten" : "demon lord"));
+        return h("button", { class: "qtile lord" + (open ? "" : " locked") + (done ? " done" : ""), type: "button", onclick: () => toast(done ? `You beat ${lord.name}!` : open ? `${cap(lord.name)} is waiting. Face him from the dawn screen.` : "Master every day in this region first.") }, h("span", { class: "z" }, n.t === "final" ? "🐉" : "👹"), h("span", { class: "nm" }, cap(lord.name)), h("span", { class: "kind" }, done ? "beaten" : "demon lord"));
       });
       const locked = !nodes.some(n => n.t !== "chest" && prog.nodeOpen(n));
-      return h("section", { class: "qregion" + (locked ? " lockedr" : "") }, h("h3", {}, `${r.emoji} ${r.name}`), h("p", { class: "small muted" }, r.blurb), h("div", { class: "qtiles" }, ...tiles));
+      const fk = r.look || r.n, F = S().forts && S().forts[fk], built = F && F.pieces && F.pieces.length;
+      const here = cur && cur.region && (cur.region.look || cur.region.n) === fk;
+      const visit = !locked && built && !here && onVisit ? h("button", { class: "btn small blue", type: "button", onclick: () => { sfx("click"); onVisit(fk); } }, "🏰 Visit this fort") : null;
+      return h("section", { class: "qregion" + (locked ? " lockedr" : "") }, h("div", { class: "row", style: "justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap" }, h("h3", {}, `${r.emoji} ${r.name}`), visit), h("p", { class: "small muted" }, r.blurb), h("div", { class: "qtiles" }, ...tiles));
     });
     set(h("div", { class: "stack" }, ...blocks));
   }

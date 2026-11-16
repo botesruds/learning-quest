@@ -4,6 +4,7 @@ import { makeIsland, makeWater, makeTree, makeRock, makeFlower, makeCloud, makeK
 import { createSave } from "./save.js";
 import { unlockAudio, sfx, playMusic, stopMusic, setSfx, setMusic, SFX_NAMES } from "./audio.js";
 import { createFort, claimedHalf } from "./fort.js";
+import { setStyle } from "./pieces.js";
 import { createProgress } from "./progress.js";
 import { createDay } from "./day.js";
 import { createNight } from "./night.js";
@@ -78,7 +79,17 @@ function scenery(region) {
     else if (r > 0.93 && !L.snow && !L.lava) { const f = makeFlower(rnd); f.position.set(c.x + (rnd() - 0.5) * 0.6, c.h, c.z + (rnd() - 0.5) * 0.6); sceneryG.add(f); }
   });
 }
-/* the land takes on the look of the region he is in now; his fort stays exactly as he built it */
+/* each region has its own land, its own fort and its own building style. Materials, gold and plans travel with him. */
+let visiting = null;                                    // a region number when he is visiting an older fort
+const regionShown = () => visiting || regionNow();
+function showRegion(r) {
+  setLook(r);
+  if (fort && fort.region !== r) {
+    setStyle(r); fort.setRegion(r);
+    scene.remove(keep); live.delete(keep); keep = addLive(makeKeep(r)); keep.position.set(0, 1, 0); bannerN = -1; hangBanners();
+    if (builder) { builder.paintTray && builder.paintTray(); }
+  }
+}
 function setLook(region) {
   if (!REGION_LOOK[region] || region === lookNow) return;
   lookNow = region; const L = REGION_LOOK[region];
@@ -145,7 +156,9 @@ function matsChips() {
     h("span", { class: "mat", title: "Tower plans" }, h("span", { class: "mi" }, "📜"), h("b", {}, Object.keys(PIECES).filter(k => PIECES[k].bp).reduce((a, k) => a + (S().blueprints[k] || 0), 0))));
 }
 function dawnScreen() {
-  setLook(regionNow()); hangBanners();
+  let sub0 = "";
+  showRegion(regionShown()); hangBanners();
+  if (visiting) return visitScreen();
   if (builder) builder.unmount();
   if (day && day.isOpen) day.close("nav");
   stage.setShift(0, 0); rig.autoSpin = 0.03; stage.flyTo(DAWN_VIEW, 1.4);
@@ -158,7 +171,8 @@ function dawnScreen() {
   } else if (cur.t === "level") {
     const tp = prog.topic(cur.key), st = prog.stars(cur.key);
     main = h("button", { class: "btn pulse go-day", type: "button", onclick: () => { sfx("whoosh"); day.open(cur.key); } }, cur.repair ? `🔧 Repair: ${tp.t.short}` : `☀️ Day ${prog.dayNo(cur.key)}: ${tp.t.short}`);
-    sub = cur.repair ? "A demon lord found a weak spot. Fix it to make the wall strong again." : `${tp.region ? tp.region.emoji + " " + tp.region.name + " · " : ""}${st ? "⭐".repeat(st) + " so far" : "A new day"}`;
+    if (!cur.repair && fort.count() === 0 && cur.region && cur.region.n > 1) sub0 = `A new land! Tap 🔨 Build to start your ${cur.region.name} fort.`;
+    sub = sub0 ? sub0 : cur.repair ? "A demon lord found a weak spot. Fix it to make the wall strong again." : `${tp.region ? tp.region.emoji + " " + tp.region.name + " · " : ""}${st ? "⭐".repeat(st) + " so far" : "A new day"}`;
   } else {
     const lord = cur.t === "final" ? cur.region.final : cur.region.lord;
     main = h("button", { class: "btn pulse go-day", type: "button", onclick: () => { if (cur.t === "lord" && !prog.lordReady(cur.pack, cur.region)) { toast("Repair the weak spots first."); return; } startSiege(cur); } }, `${cur.t === "final" ? "🐉" : "👹"} ${lord.name[0].toUpperCase() + lord.name.slice(1)}`);
@@ -180,15 +194,28 @@ function dawnScreen() {
   setTimeout(() => main.focus({ preventScroll: true }), 60);
 }
 
+/* visiting an older fort: he can look and build there, then head home to today's fort */
+function visitScreen() {
+  const R = prog.regions.find(x => (x.r.look || x.r.n) === visiting), name = R ? R.r.emoji + " " + R.r.name : "an old fort";
+  const home = h("button", { class: "btn pulse go-day", type: "button", onclick: () => { sfx("whoosh"); visiting = null; dawnScreen(); } }, "🏠 Back to today's fort");
+  const back = h("button", { class: "chip icon", type: "button", "aria-label": "Back to today's fort", title: "Back", onclick: () => { visiting = null; dawnScreen(); } }, "◀");
+  const card = h("div", { class: "dawn panel fade-in" }, h("p", { class: "dsub" }, `You're visiting your fort in ${name}. It stays just as you built it.`), home,
+    h("div", { class: "drow" }, h("button", { class: "btn small blue", type: "button", onclick: () => { sfx("click"); rig.autoSpin = 0; stage.flyTo(BUILD_VIEW, 1.2); buildScreen(); } }, "🔨 Build here")));
+  ui.replaceChildren(hud([back]), matsChips(), h("div", { class: "grow" }), card);
+}
+function visitFort(r) { visiting = r === regionNow() ? null : r; if (day && day.isOpen) day.close("nav"); stage.flyTo(DAWN_VIEW, 1.2); dawnScreen(); }
+
 /* a demon lord attacks */
 function startSiege(node) {
   if (builder) builder.unmount(); if (day && day.isOpen) day.close("nav");
+  visiting = null; showRegion(regionNow());
   night.startSiege(node);
 }
 
 /* night falls */
 function startNight(key) {
   if (builder) builder.unmount(); if (day && day.isOpen) day.close("nav");
+  visiting = null; showRegion(regionNow());
   night.start(key);
 }
 
@@ -255,7 +282,7 @@ function demoFort() {
   [[-4, 2], [3, 2], [-4, -2], [3, -2]].forEach(([x, z]) => P.push(["flowers", x, z, 1]));
   for (let i = -7; i <= 6; i += 3) P.push(["spikes", i, R + 3, 2], ["goo", i + 1, R + 3, 2]);
   const seen = new Set();
-  S().forts[1] = { pieces: P.filter(([, x, z]) => { const k = x + "," + z; if (seen.has(k) || fort.inKeep(x, z)) return false; seen.add(k); return true; }) };
+  S().forts[fort.region] = { pieces: P.filter(([, x, z]) => { const k = x + "," + z; if (seen.has(k) || fort.inKeep(x, z)) return false; seen.add(k); return true; }) };
   save.commit(); fort.load(); toast("Demo castle built");
 }
 
@@ -272,12 +299,14 @@ function demoFort() {
     onNight: key => startNight(key),
     onFixCrack: cell => { fort.fixCrack(cell); save.commit(); },
     onHero: () => dressHero(),
+    onVisit: r => visitFort(r),
     onFixTopic: key => { fort.crackList().filter(c => c.topic === key).forEach(c => fort.fixCrack(c.cell)); save.commit(); },
     onClose: why => { if (why === "stop") { stopMusic(); stage.flyTo(TITLE_VIEW, 1.4); setTimeout(() => (rig.autoSpin = 0.05), 1400); titleScreen(); toast("Great work today, Commander. Your fort is saved and waiting."); } else if (why !== "build" && why !== "nav" && why !== "night") dawnScreen(); } });
   night = createNight({ stage, fx, fort, island, save, prog, ui, toast, hud, onMorning: r => day.morning(r), onLeave: () => { playMusic("day"); dawnScreen(); } });
+  showRegion(regionNow());
   titleScreen();
   const wake = () => { if (unlockAudio() && S().music && !builder.selected) playMusic("title"); removeEventListener("pointerdown", wake); };
   addEventListener("pointerdown", wake);
   if (DEV) bench();
-  window.__fd = { stage, save, fx, fort, builder, prog, day, night, THREE, dawnScreen, startNight, startSiege, demoFort, setLook, dressHero };
+  window.__fd = { stage, save, fx, fort, builder, prog, day, night, THREE, dawnScreen, startNight, startSiege, demoFort, setLook, dressHero, showRegion, visitFort };
 })();

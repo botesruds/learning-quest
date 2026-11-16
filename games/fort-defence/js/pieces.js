@@ -35,6 +35,18 @@ const C = {
   stone: 0xb3bac4, stone2: 0x959fab, stone3: 0xd0d6de, roof: 0xd9473b, roof2: 0x2f6fde, metal: 0x50545e, gold: 0xffc83d,
   banner: 0x2f6fde, goo: 0x9b5cf6, leaf: 0x3fae4a, leaf2: 0x5cc556, water: 0x2fa7e6,
 };
+/* each region's fort has its own building style: the same pieces in that land's materials */
+const BASE = { ...C };
+export const STYLES = {
+  1: {},                                                                                                                    // Letter Land: wood palisade and grey stone
+  2: { stone: 0xd9c296, stone2: 0xbfa576, stone3: 0xead9b4, roof: 0x3f8f4a, banner: 0x2f8a4a, roof2: 0x2f8a4a },            // Balance Bridge: sandstone, green roofs
+  3: { log: 0x9fb6c9, log2: 0x86a0b6, tip: 0xffffff, stone: 0xcfe8ff, stone2: 0xa9d0f2, stone3: 0xeef8ff, roof: 0x6fb7ff, roof2: 0x9be0ff, banner: 0x2f6fbf, metal: 0x7fa6c9 },   // Pattern Peaks: ice and crystal
+  4: { log: 0x9c6b3a, log2: 0x7d522b, tip: 0xe0b45a, stone: 0xc9a14a, stone2: 0x9c7a35, stone3: 0xe0c27a, roof: 0x6b6f78, roof2: 0x8a8f99, metal: 0x8a5a2e, banner: 0xff8a3d },  // Robot Factory: brass and gears
+  5: { log: 0x4a3030, log2: 0x3a2424, tip: 0xffc83d, dark: 0x2b2127, stone: 0x4a4352, stone2: 0x35303d, stone3: 0x5c5466, roof: 0xffc83d, roof2: 0xe2452e, banner: 0xe2452e, metal: 0x2b2127 },   // Final Castle: obsidian and gold
+};
+let styleNow = 1;
+export function setStyle(r) { styleNow = STYLES[r] ? r : 1; Object.assign(C, BASE, STYLES[styleNow]); }
+export const pieceStyle = () => styleNow;
 const pyramid = (r, h, c) => { const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 4), mat(c)); m.rotation.y = Math.PI / 4; m.castShadow = true; return m; };
 const at = (o, x, y, z) => (o.position.set(x, y, z), o);
 

@@ -14,7 +14,8 @@ export function claimedHalf(S) {
   return Math.min(MAX_HALF, 10 + Math.floor(mastered / 3) + (S.bonusLand || 0));
 }
 
-export function createFort({ scene, state, region = 1, island, onFrameObjects }) {
+export function createFort({ scene, state, region: region0 = 1, island, onFrameObjects }) {
+  let region = region0;
   const root = new THREE.Group(); scene.add(root);
   const cells = new Map();          // key -> { t, gx, gz, lv, obj }
   const S = typeof state === "function" ? state : () => state;
@@ -132,6 +133,9 @@ export function createFort({ scene, state, region = 1, island, onFrameObjects })
   drawLand(); load(); drawCracks();
   return {
     addCrack, fixCrack, crackList, drawCracks, crackRoot,
+    /* show another region's fort (each region keeps its own) */
+    setRegion(r) { if (r === region) return; region = r; load(); drawLand(); },
+    get region() { return region; },
     root, cells, check, place, upgrade, remove, move, spentOn, load, at, centre, highlight, showGrid, redrawLand: drawLand,
     get half() { return half; }, inLand, inKeep,
     count: () => cells.size,

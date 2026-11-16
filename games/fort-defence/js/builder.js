@@ -1,7 +1,7 @@
 /* Build mode: camera controls, the build tray, drag-and-drop, paint-to-build, upgrade and pick up. */
 import { THREE, isTouch, reducedMotion } from "./gfx.js";
 import { PIECES, ORDER, MATS, maxLevel, FLAT } from "./pieces.js";
-import { makePiece } from "./pieces.js";
+import { makePiece, pieceStyle } from "./pieces.js";
 import { pieceThumb } from "./thumbs.js";
 import { sfx, unlockAudio } from "./audio.js";
 
@@ -200,7 +200,7 @@ export function createBuilder({ stage, fort, fx, save, toast, onChange }) {
     const P = PIECES[c.t], top = c.lv >= maxLevel(c.t), next = top ? null : costOf(c.t, c.lv + 1);
     const name = P.lvName ? P.lvName[c.lv - 1] : P.name;
     popup = h("div", { class: "popup panel fade-in", role: "dialog", "aria-label": name },
-      h("div", { class: "pophead" }, h("img", { src: thumbs[c.t + c.lv] || (thumbs[c.t + c.lv] = pieceThumb(c.t, c.lv)), alt: "" }),
+      h("div", { class: "pophead" }, h("img", { src: thumbs[pieceStyle() + c.t + c.lv] || (thumbs[pieceStyle() + c.t + c.lv] = pieceThumb(c.t, c.lv)), alt: "" }),
         h("div", {}, h("b", {}, name), maxLevel(c.t) > 1 ? h("div", { class: "lvl" }, ...Array.from({ length: maxLevel(c.t) }, (_, i) => h("i", { class: i < c.lv ? "on" : "" }))) : null, h("div", { class: "tip" }, P.tip))),
       h("div", { class: "popbtns" },
         top ? (maxLevel(c.t) > 1 ? h("span", { class: "maxed" }, "★ Top level") : null)
@@ -228,7 +228,7 @@ export function createBuilder({ stage, fort, fx, save, toast, onChange }) {
     trayEl.querySelector(".items").replaceChildren(...list.map(t => {
       const P = PIECES[t], cost = costOf(t, 1), bp = P.bp ? t : null, afford = canPay(cost, bp);
       const el = h("button", { type: "button", class: "item" + (afford ? "" : " poor") + (selected === t ? " sel" : ""), "data-piece": t, "aria-label": `${P.name}. ${P.tip}` },
-        h("img", { src: thumbs[t + 1] || (thumbs[t + 1] = pieceThumb(t, 1)), alt: "", draggable: "false" }),
+        h("img", { src: thumbs[pieceStyle() + t + 1] || (thumbs[pieceStyle() + t + 1] = pieceThumb(t, 1)), alt: "", draggable: "false" }),
         h("span", { class: "nm" }, P.name), costChips(cost),
         bp ? h("span", { class: "bp" + ((S().blueprints[t] || 0) ? "" : " none") }, `📜 ${S().blueprints[t] || 0} plan${(S().blueprints[t] || 0) === 1 ? "" : "s"}`) : null);
       let st = null;

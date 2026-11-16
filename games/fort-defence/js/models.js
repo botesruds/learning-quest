@@ -107,7 +107,11 @@ export function makeCloud(rnd = Math.random) {
 export function makeKeep(style = "wood") {
   const S = {
     wood: { wall: 0xc0894f, trim: 0x8a5a2e, roof: 0xd9473b, stone: 0xa9b1bb },
-  }[style] || { wall: 0xc0894f, trim: 0x8a5a2e, roof: 0xd9473b, stone: 0xa9b1bb };
+    2: { wall: 0xe0c99c, trim: 0x9c7a4a, roof: 0x3f8f4a, stone: 0xbfa576 },
+    3: { wall: 0xdff1ff, trim: 0x8fc0e8, roof: 0x6fb7ff, stone: 0xa9d0f2 },
+    4: { wall: 0xc9a14a, trim: 0x6b6f78, roof: 0x8a5a2e, stone: 0x9c7a35 },
+    5: { wall: 0x4a4352, trim: 0xffc83d, roof: 0xe2452e, stone: 0x2b2127 },
+  }[style === 1 ? "wood" : style] || { wall: 0xc0894f, trim: 0x8a5a2e, roof: 0xd9473b, stone: 0xa9b1bb };
   const g = new THREE.Group();
   g.add(block(3.6, 0.6, 3.6, S.stone, 0, 0, 0, { r: 0.12 }));                 // stone footing
   g.add(block(3.0, 3.2, 3.0, S.wall, 0, 0.6, 0, { r: 0.1 }));                  // tower body

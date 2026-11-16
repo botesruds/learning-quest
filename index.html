@@ -56,6 +56,13 @@ td,th{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
 code{font-size:13px;word-break:break-all;background:var(--surface-2);padding:2px 6px;border-radius:6px}
 input{font:inherit;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
 .btn{font:700 15px var(--f-display);background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:9px 14px;cursor:pointer}
+.btn.big{font-size:20px;padding:14px 22px;border-radius:14px}
+.btn:disabled{opacity:.6}
+.codein{font:800 30px var(--f-display);letter-spacing:.12em;width:8.5em;text-align:center;padding:12px}
+.dev{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--bg)}
+.tag{font-size:12px;font-weight:700;background:var(--surface-2);color:var(--muted);border-radius:999px;padding:2px 8px;margin-left:8px}
+.pair{display:grid;gap:8px;border:2px dashed var(--accent);border-radius:14px;padding:14px;text-align:center}
+.pair .code{font:800 44px var(--f-display);letter-spacing:.12em;color:var(--accent)}
 </style>
 </head>
 <body>
@@ -77,27 +84,81 @@ function gameCard(g,color,me){
     h("span",{class:"play"},last?"Continue":"Start"));
 }
 
+function devicesCard(){
+  const box=h("div",{style:"display:grid;gap:10px"},h("p",{class:"muted",style:"margin:0;font-size:15px"},"Loading devices…"));
+  const codeBox=h("div",{});
+  let timer=null;
+  const addBtn=h("button",{class:"btn",type:"button",onclick:async()=>{
+    addBtn.disabled=true; const r=await Family.pairCode().catch(()=>null); addBtn.disabled=false;
+    if(!r||!r.ok){ codeBox.replaceChildren(h("p",{class:"muted"},"Couldn't make a code just now. Try again in a moment.")); return; }
+    let left=r.expires_in||600; clearInterval(timer);
+    const t=h("span",{});
+    const tick=()=>{ left--; if(left<=0){ clearInterval(timer); codeBox.replaceChildren(h("p",{class:"muted"},"That code has run out. Make a new one when you're ready.")); return; } t.textContent=Math.floor(left/60)+":"+String(left%60).padStart(2,"0"); };
+    tick(); timer=setInterval(tick,1000);
+    codeBox.replaceChildren(h("div",{class:"pair"},
+      h("p",{style:"margin:0"},"On the new device, open this site and type this code:"),
+      h("div",{class:"code"},r.code.slice(0,3)+" "+r.code.slice(3)),
+      h("p",{class:"muted",style:"margin:0;font-size:15px"},"Works once. Runs out in ",t,". Then tap Refresh to see it in the list.")));
+  }},"Add a device");
+  async function fill(){
+    const r=await Family.devices().catch(()=>null);
+    if(!r||!r.ok){ box.replaceChildren(h("p",{class:"muted",style:"margin:0;font-size:15px"},"Couldn't load the device list.")); return; }
+    const me=Family.thisDevice;
+    box.replaceChildren(...r.devices.map(d=>{
+      const row=h("div",{class:"dev"});
+      const show=()=>row.replaceChildren(h("div",{},h("b",{},d.label),d.id===me?h("span",{class:"tag"},"this device"):null,
+        h("div",{class:"muted",style:"font-size:14px"},"Last used: "+ago(Date.parse(d.seen)).replace("played ",""))),
+        h("button",{class:"link",type:"button",onclick:ask},"Remove"));
+      const ask=()=>row.replaceChildren(h("span",{},d.id===me?"Remove this device? It will need a new code to play again.":"Remove "+d.label+"? It will stop saving until it gets a new code."),
+        h("span",{style:"display:flex;gap:12px"},h("button",{class:"btn",type:"button",onclick:async()=>{ await Family.removeDevice(d.id).catch(()=>null); if(d.id===me){ await Family.forget(); render(); } else fill(); }},"Remove"),h("button",{class:"link",type:"button",onclick:show},"Keep")));
+      show(); return row;
+    }));
+  }
+  fill();
+  return [h("h3",{},"Devices"),h("p",{class:"muted",style:"font-size:15px;margin:0"},"These devices can play and save. To add a tablet or laptop, make a code here and type it on the new device."),
+    box,h("div",{style:"display:flex;gap:12px;align-items:center;flex-wrap:wrap"},addBtn,h("button",{class:"link",type:"button",onclick:fill},"Refresh")),codeBox];
+}
+
 function grownUps(){
   const tbl=h("table",{},h("tr",{},h("th",{},"Player"),...CATALOG.flatMap(s=>s.games.map(g=>h("th",{},g.title)))),
     ...FAM.players.map(p=>h("tr",{},h("td",{},p.avatar+" "+p.nickname),...CATALOG.flatMap(s=>s.games.map(g=>h("td",{},ago(p.games[g.id])))))));
-  const links=FAM.players.map(p=>{ const url=location.origin+"/"+Family.link("",p.slug); return h("p",{},h("b",{},p.nickname+"'s bookmark: "),h("code",{},url)); });
   const nick=h("input",{placeholder:"Nickname",maxlength:"24"});
-  const add=h("button",{class:"btn",type:"button",onclick:async()=>{ if(!nick.value.trim()) return; add.disabled=true; const r=await Family.addPlayer(nick.value.trim()).catch(()=>null); if(r&&r.ok){ await load(); } else { add.disabled=false; alert("Couldn't add that name."); } }},"Add player");
+  const msg=h("span",{class:"muted",style:"font-size:15px"});
+  const add=h("button",{class:"btn",type:"button",onclick:async()=>{ if(!nick.value.trim()) return; add.disabled=true; const r=await Family.addPlayer(nick.value.trim()).catch(()=>null); if(r&&r.ok){ await load(); } else { add.disabled=false; msg.textContent="Couldn't add that name."; } }},"Add player");
+  let access;
+  if(Family.paired) access=devicesCard();
+  else { // old bookmark mode, until device pairing is switched on
+    const links=FAM.players.map(p=>{ const url=location.origin+"/"+Family.link("",p.slug); return h("p",{},h("b",{},p.nickname+"'s bookmark: "),h("code",{},url)); });
+    access=[h("h3",{},"Bookmarks"),h("p",{class:"muted",style:"font-size:15px;margin:0"},"Each player's bookmark opens their own games, already signed in. Keep these links in the family: anyone with one can see that progress."),...links];
+  }
   return h("details",{},h("summary",{},"For grown-ups"),h("div",{class:"card",style:"margin-top:12px;display:grid;gap:12px"},
     h("h3",{},"Progress at a glance"),tbl,
     h("p",{class:"muted",style:"font-size:15px;margin:0"},"For stars, weak spots and boss results, open a game as that player and press ⚙ in the top corner."),
-    h("h3",{},"Bookmarks"),h("p",{class:"muted",style:"font-size:15px;margin:0"},"Each player's bookmark opens their own games, already signed in. Keep these links in the family: anyone with one can see that progress."),...links,
-    h("h3",{},"Add a player"),h("div",{style:"display:flex;gap:8px;flex-wrap:wrap"},nick,add)));
+    ...access,
+    h("h3",{},"Add a player"),h("div",{style:"display:flex;gap:8px;flex-wrap:wrap;align-items:center"},nick,add,msg)));
+}
+
+function connectScreen(note){
+  const inp=h("input",{inputmode:"numeric",autocomplete:"one-time-code",maxlength:"7",placeholder:"123 456",class:"codein","aria-label":"6-digit code"});
+  const out=h("p",{class:"muted",style:"min-height:1.5em"},note||"");
+  const go=h("button",{class:"btn big",type:"button",onclick:async()=>{
+    const c=inp.value.replace(/\D/g,""); if(c.length!==6){ out.textContent="The code has 6 numbers."; return; }
+    go.disabled=true; out.textContent="Connecting…";
+    const r=await Family.pair(c).catch(()=>null); go.disabled=false;
+    if(r&&r.ok){ load(); } else { out.textContent=r?"That code didn't work. Codes work once and run out after 10 minutes, so ask for a new one.":"Can't reach the internet right now. Try again in a moment."; inp.select(); }
+  }},"Connect");
+  inp.addEventListener("keydown",e=>{ if(e.key==="Enter") go.click(); });
+  app.replaceChildren(h("div",{class:"hello"},h("span",{class:"av"},"🔑"),h("h1",{},"Learning Quest")),
+    h("p",{},"Connect this device to your family. A grown-up opens ",h("b",{},"For grown-ups → Add a device")," on a device that's already connected, and you type the code here."),
+    h("div",{style:"display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px"},inp,go),out);
+  inp.focus();
 }
 
 function render(){
-  if(!Family.hasKey){
-    app.replaceChildren(h("div",{class:"hello"},h("span",{class:"av"},"🔖"),h("h1",{},"Learning Quest")),
-      h("p",{class:"muted"},"Open this site from your family bookmark."));
-    return;
-  }
+  if(FAM&&FAM.error==="device"){ connectScreen("This device was removed from the family list. Ask a grown-up for a new code."); return; }
+  if(!Family.hasKey){ connectScreen(); return; }
   if(!FAM||!FAM.ok){
-    app.replaceChildren(h("h1",{},"Learning Quest"),h("p",{class:"muted"},FAM?"This bookmark isn't working. Ask a grown-up for the family bookmark.":"Can't reach the internet right now. Try again in a moment."),
+    app.replaceChildren(h("h1",{},"Learning Quest"),h("p",{class:"muted"},FAM?"This device isn't connected any more. Ask a grown-up for a new code.":"Can't reach the internet right now. Try again in a moment."),
       h("button",{class:"btn",type:"button",onclick:load},"Try again"));
     return;
   }
