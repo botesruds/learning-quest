@@ -5,7 +5,7 @@
      mistake { k:"mistake", q, lines:[the goblin's worked lines], bad:index of the first wrong line, fixes:[what that line should say], fix, why }
      build   { k:"build", q, tiles:[...], ans:"the expression or equation", why }   (checked by value, so 2 × n + 7 and 2n + 7 both count)
    Choices are shuffled when shown, so the right answer can always be listed first here.
-   Keyed by topic id. Written 15 November 2026 for Rudi to check (World 1 first, then Worlds 2 to 4 overnight). */
+   Keyed by topic id. Written 15 November 2026; checked by Rudi on 16 November (his wording fixes applied). */
 const U = {};
 
 /* World 1: Letter Land */
@@ -23,13 +23,13 @@ U[2] = [
   { k: "method", q: "a = 3 and b = 4. What does <b>2ab</b> mean?", c: ["2 × 3 × 4", "2 + 3 + 4", "The number 234"], a: 0, why: "Numbers and letters stuck together multiply: 2 × a × b = 2 × 3 × 4 = 24." },
 ];
 U[3] = [
-  { k: "why", q: "Why does <b>5 − (−2)</b> give 7?", c: ["Taking away a negative is the same as adding it", "Two minus signs always make a minus", "You can ignore the brackets"], a: 0, why: "− (−2) is the same as + 2. So 5 − (−2) = 5 + 2 = 7." },
+  { k: "why", q: "Why does <b>5 − (−2)</b> give 7?", c: ["Taking away a negative is the same as adding the positive number", "Two minus signs always make a minus", "You can ignore the brackets"], a: 0, why: "− (−2) is the same as + 2. So 5 − (−2) = 5 + 2 = 7." },
   { k: "mistake", q: "Work out <b>−3 − 4</b> on a number line.", lines: ["Start at −3", "− 4 means walk 4 to the right", "You land on 1"], bad: 1, fixes: ["− 4 means walk 4 to the left", "− 4 means stay where you are", "− 4 means jump straight to 4"], fix: 0, why: "Taking away a positive number means walking left. From −3, walk 4 to the left and you land on −7." },
   { k: "method", q: "Which of these is the same as <b>6 + (−4)</b>?", c: ["6 − 4", "6 + 4", "−6 − 4"], a: 0, why: "Adding a negative is the same as taking away: + (−4) is − 4. So 6 + (−4) = 2." },
   { k: "why", q: "Why is <b>(−3) × (−2)</b> positive?", c: ["The two numbers have the same sign, so the answer is positive", "You always drop the minus signs when you multiply", "A negative times anything is negative"], a: 0, why: "Same signs give a positive answer; different signs give a negative. So (−3) × (−2) = 6, but (−3) × 2 = −6." },
 ];
 U[4] = [
-  { k: "build", q: "Build this: <b>5 less than n</b>.", tiles: ["5", "n", "−", "+"], ans: "n-5", why: "\"5 less than n\" starts with n and takes 5 away: n − 5. Test it: 5 less than 10 is 5, and 10 − 5 = 5." },
+  { k: "build", q: "Build this: <b>5 less than n</b>.", tiles: ["5", "n", "−", "+"], ans: "n-5", why: "\"5 less than n\" starts with n and takes 5 away: n − 5. Test it with n = 12: 5 less than 12 is 7, and 12 − 5 = 7." },
   { k: "build", q: "Build this: <b>double n, then add 7</b>.", tiles: ["2", "n", "+", "7", "×", "−"], ans: "2n+7", why: "Double n is 2n. Then add 7: 2n + 7." },
   { k: "mistake", q: "Write <b>three more than twice a number</b> as an expression.", lines: ["Call the number n", "Twice the number is 2n", "Three more than that is 3 × 2n"], bad: 2, fixes: ["2n + 3", "3 + n", "2n − 3"], fix: 0, why: "\"More than\" means add. Three more than 2n is 2n + 3." },
   { k: "method", q: "Kai writes \"n less than 8\" as n − 8. What is the best way for him to check?", c: ["Try a number: if n = 2, 2 less than 8 is 6, but 2 − 8 is −6", "Count the letters in the sentence", "Put the letter first, because letters always go first"], a: 0, why: "Testing with a real number shows the order. \"n less than 8\" is 8 − n." },
@@ -70,7 +70,7 @@ U[10] = [
   { k: "why", q: "The scale says <b>x + 3 = 10</b> and is level. Why can you take 3 off BOTH sides?", c: ["Taking the same amount off both sides keeps the scale level", "Because 3 is a small number", "You only need to take it off the left"], a: 0, why: "Both sides weigh the same. Take the same amount from each and they still weigh the same, so the scale stays level: x = 7." },
   { k: "mistake", q: "Solve 2x + 1 = 9 on the balance.", lines: ["2x + 1 = 9", "2x = 9", "x = 4.5"], bad: 1, fixes: ["2x = 8", "2x = 10", "2x + 1 = 8"], fix: 0, why: "The 1 was taken off the left, so it must come off the right as well: 9 − 1 = 8. Then 2x = 8 and x = 4." },
   { k: "why", q: "What does <b>=</b> mean in 3 + 5 = 4 + 4?", c: ["Both sides have the same value", "\"Write the answer next\"", "The left side is bigger"], a: 0, why: "= means the two sides balance. 3 + 5 is 8 and 4 + 4 is 8, so they are equal. It doesn't mean \"the answer comes next\"." },
-  { k: "method", q: "The scale shows <b>3 bags = 12 marbles</b>. What keeps it level and finds one bag?", c: ["Split both sides into 3 equal groups", "Take 3 marbles off the right", "Add a bag to the right side"], a: 0, why: "Share both sides into 3 equal groups. One bag balances one group of 4 marbles, so n = 4." },
+  { k: "method", q: "The scale shows <b>3 bags = 12 marbles</b>. What keeps it level and finds one bag?", c: ["Split both sides into 3 equal groups", "Take 3 marbles off the right", "Add a bag to the right side"], a: 0, why: "Share both sides into 3 equal groups. One bag balances one group of 4 marbles, so one bag holds 4 marbles." },
 ];
 U[11] = [
   { k: "why", q: "Inputs 1, 2, 3 give outputs 5, 8, 11. Why is the rule \"× 3 then something\"?", c: ["The outputs go up by 3 each time the input goes up by 1", "Because 3 is the first odd number", "Because there are 3 inputs"], a: 0, why: "Each time the input goes up by 1, the output jumps by 3, so the input is being multiplied by 3. Then 1 × 3 = 3 and 5 − 3 = 2, so the rule is × 3 + 2." },
@@ -82,7 +82,7 @@ U[12] = [
   { k: "why", q: "To solve <b>x − 8 = 5</b>, why do you ADD 8?", c: ["Adding 8 undoes the − 8 and leaves x on its own", "Because you always add in equations", "Because 8 is bigger than 5"], a: 0, why: "x had 8 taken away. Adding 8 undoes that, so x = 5 + 8 = 13. Do it to both sides to keep the balance." },
   { k: "method", q: "Solve <b>x ÷ 3 = 6</b>. What's the move?", c: ["Multiply both sides by 3", "Divide both sides by 3", "Take 3 from both sides"], a: 0, why: "x has been divided by 3. Multiplying by 3 undoes it: x = 18. Check: 18 ÷ 3 = 6." },
   { k: "mistake", q: "Solve 4x = 20.", lines: ["4x = 20", "x = 20 − 4", "x = 16"], bad: 1, fixes: ["x = 20 ÷ 4", "x = 20 × 4", "x = 4 − 20"], fix: 0, why: "4x means 4 × x, so undo it by dividing by 4: x = 5. Check: 4 × 5 = 20." },
-  { k: "why", q: "You solved x + 9 = 14 and got x = 5. What is the best way to check?", c: ["Put 5 back in: 5 + 9 = 14 ✓", "Solve it again the same way", "Ask if 5 is a nice number"], a: 0, why: "Substituting your answer back into the equation shows whether both sides really balance." },
+  { k: "method", q: "You solved x + 9 = 14 and got x = 5. What is the best way to check?", c: ["Put 5 back in: 5 + 9 = 14 ✓", "Solve it again the same way", "Ask if 5 is a nice number"], a: 0, why: "Substituting your answer back into the equation shows whether both sides really balance." },
 ];
 U[13] = [
   { k: "why", q: "In <b>3x + 2 = 17</b>, why do you take away the 2 BEFORE dividing by 3?", c: ["The + 2 was the last thing done to x, so it's undone first", "Because subtraction always comes first", "Dividing first would make x negative"], a: 0, why: "x was multiplied by 3, then 2 was added. Undo in reverse order: 17 − 2 = 15, then 15 ÷ 3 = 5." },
@@ -123,7 +123,7 @@ U[18] = [
   { k: "build", q: "Build the term-to-term rule for 2, 6, 18, 54, … as \"next = …\" using <b>t</b> for this term.", tiles: ["3", "t", "+", "4", "×"], ans: "3t", why: "Each term is 3 times the one before: 2 × 3 = 6, 6 × 3 = 18. So next = 3t." },
 ];
 U[19] = [
-  { k: "why", q: "The sequence 7, 10, 13, 16 goes up by 3. Why does its nth term start with <b>3n</b>?", c: ["Going up by 3 each time is like the 3 times table", "Because the first term is 3 away from 10", "Because there are 3 digits"], a: 0, why: "The 3 times table (3, 6, 9, 12) also jumps by 3. Our terms are 4 more each time, so the nth term is 3n + 4." },
+  { k: "why", q: "The sequence 7, 10, 13, 16 goes up by 3. Why does its nth term start with <b>3n</b>?", c: ["Going up by 3 each time is like the 3 times table", "Because the first term is 3 away from 10", "Because there are 3 digits"], a: 0, why: "The 3 times table (3, 6, 9, 12) also jumps by 3. Each term is 4 more than the matching number in the 3 times table (3, 6, 9, 12), so the nth term is 3n + 4." },
   { k: "mistake", q: "Find the nth term of 5, 7, 9, 11.", lines: ["The jump is 2, so 2n", "2n gives 2, 4, 6, 8", "Each term is 2n + 5"], bad: 2, fixes: ["Each term is 2n + 3", "Each term is 5n + 2", "Each term is n + 2"], fix: 0, why: "5 − 2 = 3, so add 3: 2n + 3. Check n = 4: 2 × 4 + 3 = 11. ✓" },
   { k: "build", q: "Build the nth term of 1, 5, 9, 13, …", tiles: ["4n", "−", "3", "+", "n"], ans: "4n-3", why: "Jump 4 → 4n gives 4, 8, 12, 16. Each term is 3 less, so 4n − 3." },
   { k: "method", q: "Which term of 4n + 1 equals 41?", c: ["Solve 4n + 1 = 41", "Work out 4 × 41 + 1", "Divide 41 by 4"], a: 0, why: "Set the nth term equal to 41 and solve: 4n = 40, so n = 10. The 10th term is 41." },
