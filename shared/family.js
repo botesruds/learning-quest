@@ -79,6 +79,10 @@
     async addPlayer(nick,avatar){ return call("fl_dev_add_player","fl_add_player",{p_nickname:nick,p_avatar:avatar||"🦊"}); },
     // pairing
     async pairCode(){ return call("fl_dev_pair_start","fl_pair_start",{}); },
+    // a grown-up can connect a device by typing the family key once (it is not kept on the device)
+    async pairWithKey(k){ k=String(k||"").trim().replace(/^.*#k=/,"").replace(/&.*$/,""); try{ k=decodeURIComponent(k); }catch(e){}
+      const s=await rpc("fl_pair_start",{p_key:k}); if(!s||!s.ok) return s||{ok:false};
+      return this.pair(s.code); },
     async pair(code){ const r=await rpc("fl_pair_finish",{p_code:String(code||""),p_label:deviceName()}); if(r&&r.ok&&r.device){ adopt(r.device); } return r; },
     async devices(){ return call("fl_dev_devices",null,{}); },
     async removeDevice(id){ return call("fl_dev_device_remove",null,{p_device:id}); },

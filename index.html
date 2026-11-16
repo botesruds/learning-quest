@@ -140,6 +140,18 @@ function grownUps(){
     h("h3",{},"Add a player"),h("div",{style:"display:flex;gap:8px;flex-wrap:wrap;align-items:center"},nick,add,msg)));
 }
 
+// fallback for grown-ups when no device is connected yet: the family key (or the old bookmark link), typed once
+function keyBox(){
+  const k=h("input",{type:"password",autocomplete:"off",placeholder:"Family key or old bookmark link","aria-label":"Family key",style:"flex:1 1 260px;min-width:0"});
+  const msg=h("p",{class:"muted",style:"font-size:15px;min-height:1.4em;margin:0"});
+  const b=h("button",{class:"btn",type:"button",onclick:async()=>{ if(!k.value.trim()) return; b.disabled=true; msg.textContent="Connecting…";
+    const r=await Family.pairWithKey(k.value).catch(()=>null); b.disabled=false;
+    if(r&&r.ok){ load(); } else msg.textContent=r?"That key didn't work. Paste the whole old bookmark link, or ask for a code.":"Can't reach the internet right now. Try again in a moment."; }},"Connect with the key");
+  k.addEventListener("keydown",e=>{ if(e.key==="Enter") b.click(); });
+  return h("details",{style:"margin-top:28px"},h("summary",{},"Grown-ups: no connected device to make a code?"),
+    h("div",{class:"card",style:"margin-top:12px;display:grid;gap:10px"},h("p",{style:"margin:0;font-size:15px"},"Paste the family key or the old bookmark link here, once. It connects this device and isn't kept on it."),
+      h("div",{style:"display:flex;gap:8px;flex-wrap:wrap"},k,b),msg));
+}
 function connectScreen(note){
   const inp=h("input",{inputmode:"numeric",autocomplete:"one-time-code",maxlength:"7",placeholder:"123 456",class:"codein","aria-label":"6-digit code"});
   const out=h("p",{class:"muted",style:"min-height:1.5em"},note||"");
@@ -152,7 +164,7 @@ function connectScreen(note){
   inp.addEventListener("keydown",e=>{ if(e.key==="Enter") go.click(); });
   app.replaceChildren(h("div",{class:"hello"},h("span",{class:"av"},"🔑"),h("h1",{},"Learning Quest")),
     h("p",{},"Connect this device to your family. A grown-up opens ",h("b",{},"For grown-ups → Add a device")," on a device that's already connected, and you type the code here."),
-    h("div",{style:"display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px"},inp,go),out);
+    h("div",{style:"display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px"},inp,go),out,keyBox());
   inp.focus();
 }
 

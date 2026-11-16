@@ -63,6 +63,11 @@ function pairDb(withPairing=true){
   const db2=pairDb(false); const C=await ctx(db2); await C.goto(URL+'#k='+db2.KEY+'&p=oliver'); await C.waitForSelector('text=Hi Oliver!'); await C.click('summary');
   check('6 without pairing, key mode carries on', (await C.evaluate(()=>location.hash)).includes('k=') && (await C.locator('code').count())===1 && !(await C.evaluate(()=>Family.paired)));
   const r6=await C.evaluate(async()=>{ const x=await Family.save('fort-defence',{a:1},Date.now()); return x.ok; }); check('6 key-mode save works', r6);
+  // 6b. No connected device anywhere: a grown-up pastes the key (or the old bookmark link) once
+  const E=await ctx(db); await E.goto(URL); await E.waitForSelector('.codein'); await E.click('text=Grown-ups: no connected device');
+  await E.fill('input[type=password]','not-the-key'); await E.click('text=Connect with the key'); await E.waitForSelector("text=That key didn't work");
+  const nDev=db.devices.length; await E.fill('input[type=password]','https://example.app/#k='+db.KEY+'&p=oliver'); await E.click('text=Connect with the key');
+  await E.waitForSelector("text=Who's playing?"); check('6b key fallback connects the device', db.devices.length===nDev+1 && !(await leaks(E)));
   // 7. Phone width: connect screen fits
   const D=await ctx(db,{viewport:{width:375,height:740}}); await D.goto(URL); await D.waitForSelector('.codein');
   check('7 phone: no sideways scroll', await D.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)); await D.screenshot({path:require('path').join(require('os').tmpdir(),'pair-phone.png')});
