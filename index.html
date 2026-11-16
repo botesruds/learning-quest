@@ -135,6 +135,8 @@ function grownUps(){
     h("h3",{},"Progress at a glance"),tbl,
     h("p",{class:"muted",style:"font-size:15px;margin:0"},"For stars, weak spots and boss results, open a game as that player and press ⚙ in the top corner."),
     ...access,
+    ...(()=>{ const old=CATALOG.flatMap(s=>s.games.filter(g=>g.retired)); return old.length?[h("h3",{},"Older games"),h("p",{class:"muted",style:"font-size:15px;margin:0"},"Retired from the home screen but still playable, with their saves kept."),
+      ...old.map(g=>h("p",{style:"margin:0"},h("a",{href:Family.link(g.path)},g.icon+" "+g.title)))]:[]; })(),
     h("h3",{},"Add a player"),h("div",{style:"display:flex;gap:8px;flex-wrap:wrap;align-items:center"},nick,add,msg)));
 }
 
@@ -168,7 +170,7 @@ function render(){
     return;
   }
   const parts=[h("div",{class:"hello"},h("span",{class:"av"},me.avatar),h("div",{},h("h1",{},`Hi ${me.nickname}!`),h("p",{class:"muted",style:"margin:0"},"Pick up where you stopped.")))];
-  for(const s of CATALOG){ parts.push(h("h2",{},s.emoji+" "+s.subject),...s.games.map(g=>gameCard(g,s.color,me))); }
+  for(const s of CATALOG){ parts.push(h("h2",{},s.emoji+" "+s.subject),...s.games.filter(g=>!g.retired).map(g=>gameCard(g,s.color,me))); }
   parts.push(grownUps());
   if(FAM.players.length>1) parts.push(h("p",{},h("button",{class:"link",type:"button",onclick:()=>{ Family.setPlayer(""); render(); }},"Not "+me.nickname+"? Switch player")));
   app.replaceChildren(...parts);
