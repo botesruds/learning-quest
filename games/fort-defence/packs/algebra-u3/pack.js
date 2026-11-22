@@ -15,6 +15,31 @@ export default {
   understanding: UNDERSTANDING,  // new understanding questions, keyed by topic id
   badges: BADGES,                // { k, e, n, d }: "l7" = master topic 7, "w1" = beat region 1's demon lord, "final" = beat the final boss
   special: { invest: Investigation },   // topics with kind:"invest" are played by this function
+  // "I can" statements for the report card (drafted 22 Nov 2026 for Rudi to check; there is no official list)
+  can: {
+    1: "I can explain that a letter stands for a number we don't know yet",
+    2: "I can explain what 3n means, and how it is different from n + 3",
+    3: "I can add and subtract negative numbers using a number line",
+    4: "I can write an expression from words, like \"5 less than n\"",
+    5: "I can collect like terms to make an expression simpler",
+    6: "I can multiply and divide terms, like 3a × 2a",
+    7: "I can expand a bracket, like 3(x + 4)",
+    8: "I can substitute numbers, including negatives, into an expression or formula",
+    9: "I can use the inverse operation to undo a step",
+    10: "I can explain what the equals sign means, using a balance",
+    11: "I can find the rule of a function machine from its inputs and outputs",
+    12: "I can solve one-step equations",
+    13: "I can solve two-step equations",
+    14: "I can solve equations with brackets or letters on both sides",
+    15: "I can write and solve an equation from a word problem",
+    16: "I can rearrange a formula to make a different letter the subject",
+    17: "I can explain why a pattern's rule works for every position",
+    18: "I can continue a sequence and predict later terms",
+    19: "I can find and use the nth term of a linear sequence",
+    20: "I can recognise simple quadratic sequences, like n² + 3",
+    21: "I can investigate a pattern: find it, describe it, test it and explain it (Criterion B)",
+    22: "I can follow and write simple flowcharts and algorithms",
+  },
   regions: [
     { n: 1, name: "Letter Land", emoji: "🏝️", look: 1, blurb: "Letters are just numbers in disguise.", topics: [1, 2, 3, 4, 5, 6, 7, 8],
       lord: { name: "the Letter Guardian", badge: "w1", questions: 8, checks: 2, need: 8 } },

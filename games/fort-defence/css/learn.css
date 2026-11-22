@@ -268,6 +268,45 @@ body.sheet-open #ui{display:none}
 .sheet .kitcard summary{cursor:pointer;font-weight:700}
 .sheet .kitcard ol{margin:6px 0 0;padding-left:22px}
 
+/* ---------- armoury, patrol and report cards (js/cards.js, js/patrol.js, js/report.js) ---------- */
+.metal{display:inline-flex;align-items:center;gap:4px;border-radius:99px;padding:2px 10px;font-size:.85rem;font-weight:700;border:1.5px solid var(--line);background:var(--surface-2);white-space:nowrap}
+.m-forge{background:#fde3d3;border-color:#e8a27a}
+.m-bronze{background:#f3dcc4;border-color:#c08552}
+.m-iron{background:#e3e6ea;border-color:#8b939c}
+.m-steel{background:#dbe7f2;border-color:#6c8db0}
+.m-silver{background:#f1f3f6;border-color:#b5bcc6}
+.m-gold{background:#fff1bf;border-color:#d4a52a}
+.m-legend{background:linear-gradient(135deg,#fff3c4,#e9dcff);border-color:#9b7be0;box-shadow:0 0 10px rgba(155,123,224,.45)}
+.sheet .pt-head{gap:8px;align-items:center;flex-wrap:wrap}
+.sheet .pt-moves{display:flex;flex-direction:column;gap:6px;margin:6px 0}
+.sheet .reteach .rule{font-size:1.05rem}
+.sheet .rack{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.sheet .weapon{display:flex;flex-direction:column;gap:2px;border:2px solid var(--line);border-radius:12px;padding:8px 10px;background:var(--surface)}
+.sheet .weapon .wi{font-size:1.4rem}
+.sheet .weapon .wn{font-weight:700;line-height:1.25}
+.sheet .weapon .wm{font-size:.85rem}
+.sheet .weapon .wd{font-size:.8rem;font-weight:700;color:var(--bad)}
+.sheet .weapon.dent{border-style:dashed}
+.dawn .skip-patrol{background:none;border:0;color:#5b5446;text-decoration:underline;font:600 14px var(--f-body);cursor:pointer;padding:2px}
+.dawn .patrolbtn{background:linear-gradient(#3f8f5a,#2c6e43);box-shadow:0 7px 0 #1d4d2e,0 12px 24px rgba(0,0,0,.25)}
+.sheet .rp-subj{margin-top:6px}
+.sheet .rp-top p{margin:0}
+.sheet .rp-bar{flex:1 1 140px;height:14px;border-radius:7px;border:1.5px solid var(--line);background:var(--surface-2);overflow:hidden;min-width:120px}
+.sheet .rp-bar i{display:block;height:100%;background:var(--good)}
+.sheet .rp-land{margin:10px 0 0;font-size:1.05rem}
+.sheet .rp-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;padding:9px 12px;background:var(--surface)}
+.sheet .rp-row.here{border:2px solid #2f6fde}
+.sheet .rp-row.l-grey .rp-can,.sheet .rp-row.l-grey .rp-st{color:var(--muted)}
+.sheet .rp-dot{width:20px;height:20px;border-radius:50%;flex:0 0 20px;border:2px solid transparent}
+.sheet .rp-dot.good{background:var(--good)}.sheet .rp-dot.warn{background:#E9A621}.sheet .rp-dot.bad{background:var(--bad)}.sheet .rp-dot.grey{background:transparent;border-color:var(--grey)}
+.sheet .rp-can{flex:1 1 220px;min-width:0}
+.sheet .rp-here{color:#2f6fde;font-weight:700;font-size:.9rem}
+.sheet .rp-st{font-weight:700;white-space:nowrap}
+.sheet .rp-go{margin-left:auto}
+.sheet .rp-week{display:flex;gap:6px;align-items:flex-end}
+.sheet .rp-wd{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px}
+.sheet .rp-wbar{height:60px;width:100%;max-width:34px;display:flex;align-items:flex-end;background:var(--surface-2);border-radius:6px;overflow:hidden}
+.sheet .rp-wbar i{display:block;width:100%;background:#6c8db0}
 /* ---------- Scribe's Tower (writing): PEEL bricks, writing boxes, coach marks ---------- */
 .sheet .pk{display:inline;border-radius:6px;padding:1px 4px;line-height:1.8;box-decoration-break:clone;-webkit-box-decoration-break:clone;font:inherit;color:inherit;border:0;text-align:left}
 .sheet .pk.p{background:#d8f5dc;box-shadow:inset 0 -3px 0 #2fa84a}
