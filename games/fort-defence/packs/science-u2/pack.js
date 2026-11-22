@@ -19,6 +19,22 @@ export default {
   // pairs of days that are easy to mix up: a patrol rune on the first day prefers one of these (interleaving)
   confusable: { 3: [2], 5: [2], 6: [2], 8: [7], 9: [7], 10: [7], 11: [10], 12: [10, 7] },
   reading: { dispatches: DISPATCHES },   // the Library tower's readings, one per day (js/library.js)
+  // "I can" statements for the report card (drafted 22 Nov 2026 for Rudi to check; there is no official list)
+  can: {
+    1: "I can explain how a cell's shape fits its job",
+    2: "I can name the parts of a cell and say what each one does",
+    3: "I can compare plant and animal cells",
+    4: "I can prepare a slide, use a microscope safely and make a scientific drawing",
+    5: "I can explain how substances move in and out of cells by diffusion",
+    6: "I can put the levels of organisation in order, from cell to organism",
+    7: "I can describe the four jobs of the skeleton",
+    8: "I can explain how the skeleton protects important organs",
+    9: "I can explain how bone marrow makes blood cells",
+    10: "I can explain how muscles, tendons and bones work together to move the body",
+    11: "I can explain how antagonistic muscle pairs move a joint",
+    12: "I can describe how lifestyle and injury affect bones and muscles",
+    13: "I can plan a fair pulse-rate investigation: hypothesis, variables, repeats and a mean (Criterion B)",
+  },
   writing: { reports: REPORTS },         // the Scribe's Tower royal reports, one per day (js/scribe.js)
   regions: [
     { n: 1, name: "Cell City", emoji: "🦠", look: 6, blurb: "Every living thing is built from cells, and every part has a job.", topics: [1, 2, 3, 4, 5],
