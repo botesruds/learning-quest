@@ -212,8 +212,8 @@ const VCOLS = [0xe34b4b, 0x2f6fde, 0xf2b134, 0x7c4dff, 0x2f9e5e, 0xff8ab8, 0x2fb
 /* a storm tarp over a roof (js/storms.js): mended with 2 questions */
 function tarp(w, top) {
   const g = new THREE.Group(), s = w + 0.2;
-  const a = block(s, 0.05, s * 0.62, 0x2f7fe0, 0, top - 0.32, -s * 0.2, { r: 0.01 }); a.rotation.x = 0.5;
-  const b = block(s * 0.7, 0.05, s * 0.5, 0x2a6fc4, 0.05, top - 0.36, s * 0.24, { r: 0.01 }); b.rotation.x = -0.55;
+  const a = block(s, 0.05, s * 0.62, 0xf08a24, 0, top - 0.32, -s * 0.2, { r: 0.01 }); a.rotation.x = 0.5;
+  const b = block(s * 0.7, 0.05, s * 0.5, 0xd9761c, 0.05, top - 0.36, s * 0.24, { r: 0.01 }); b.rotation.x = -0.55;
   g.add(a, b);
   [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(([x, z]) => g.add(block(0.12, 0.1, 0.12, 0x8d8a83, x * (w / 2 + 0.16), 0, z * (w / 2 + 0.16), { r: 0.03 })));
   g.userData.tarp = true; return g;
@@ -590,7 +590,7 @@ export function createValley({ ui, h, save, prog, day, library, scribe, toast, s
         const dome = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x7fe8ff, transparent: true, opacity: 0.55, depthWrite: false }));
         dome.position.set(o.position.x, 0, o.position.z); world.add(dome); fxList.push({ mesh: dome, t: 0 });
         fx.emit(p, { n: 26, colors: [0x9ff3ff, 0xffffff, 0xffd23f], speed: 3, up: 4, size: 0.14 }); sfx("zap"); bounce(o);
-      } else { fx.emit(new THREE.Vector3(o.position.x, 1.6, o.position.z), { n: 18, colors: [0x6a6f7a, 0x9a8466, 0x2f7fe0], speed: 2.5, up: 2, size: 0.16 }); stage.shake(0.25); sfx("crack"); }
+      } else { fx.emit(new THREE.Vector3(o.position.x, 1.6, o.position.z), { n: 18, colors: [0x6a6f7a, 0x9a8466, 0xf08a24], speed: 2.5, up: 2, size: 0.16 }); stage.shake(0.25); sfx("crack"); }
     }, reducedMotion ? 50 : 650);
   }
   function refresh() { if (!open_) return; showInfo(null); build(valleyModel(S())); }

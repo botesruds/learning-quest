@@ -4,7 +4,8 @@
    - Four kinds, taken in turn: thunderstorm, flood, locust swarm, rockslide. Only the look and the words change.
    - The storm waits for him: nothing happens until he taps "Face the storm". There is no clock, and ignoring it does no harm.
    - 8 questions mixing every subject, only from days he has mastered (3 stars), weighted to what he is shakier on or hasn't
-     seen for a while (his miss rate and how long ago, or the adaptive review's own weights when that is there).
+     seen for a while (the armoury's review cards: struggling, due, low box; else his miss rate), and how long since he saw it.
+     A question from a review card that is due or struggling also counts as that card's review.
      Each starts with "Which topic is this?" (naming the idea is half the battle), then the question itself.
    - Right (on his own or on the second try): the villagers defend that topic's building and he sees it happen.
      6 of 8 keeps the whole valley safe, earns gold and a keepsake statue in the town square.
@@ -26,7 +27,7 @@ const ORDER = ["storm", "flood", "locusts", "rockslide"];
 const QN = 8, PASS = 6;
 export const STORM_OPTIONS = [{ v: 3, label: "Every 3 days he plays" }, { v: 7, label: "Every 7 days he plays" }, { v: 0, label: "Off" }];
 
-export function createStorms({ h, save, prog, valley, toast, sfx = () => {} }) {
+export function createStorms({ h, save, prog, cards = null, valley, toast, sfx = () => {} }) {
   const S = () => save.state;
   const today = () => new Date().toISOString().slice(0, 10);
   const st = () => { const s = S().storm || (S().storm = { v: 1, every: 3, from: null, pending: null, count: 0, tarps: {}, statues: [], log: [] }); s.tarps = s.tarps || {}; s.statues = s.statues || []; s.log = s.log || []; if (s.every == null) s.every = 3; return s; };
@@ -39,12 +40,19 @@ export function createStorms({ h, save, prog, valley, toast, sfx = () => {} }) {
   }
   const subj = k => prog.topic(k).pack.subject;
   const labelOf = k => `${subj(k)} · Day ${prog.dayNo(k)}: ${prog.topic(k).t.short}`;
+  /* the armoury's review cards for a day (js/cards.js): the skill cards that are due or struggling are the ones worth asking */
+  function cardInfo(k) {
+    if (!cards) return null;
+    try { const t0 = cards.today(), defs = cards.cardsOf(k).filter(d => d.kind === "skill");
+      const recs = defs.map(d => ({ d, r: cards.rec(d.id) })).filter(x => x.r);
+      return { want: recs.filter(x => x.r.due <= t0 || cards.struggling(x.r)), struggling: recs.some(x => cards.struggling(x.r)), due: recs.some(x => x.r.due <= t0), low: recs.some(x => x.r.b <= 2) };
+    } catch (e) { return null; }
+  }
   function weight(k) {
-    const C = window.__fd && window.__fd.cards;
-    if (C && typeof C.weight === "function") { try { const w = C.weight(k); if (w > 0) return w + (st().tarps[k] ? 1 : 0); } catch (e) {} }
+    const age = (Date.now() - ((S().last || {})[k] || 0)) / 864e5, tarp = st().tarps[k] ? 1 : 0, ci = cardInfo(k);
+    if (ci) return 1 + (ci.struggling ? 3 : 0) + (ci.due ? 2 : 0) + (ci.low ? 1 : 0) + Math.min(2, age / 7) + tarp;
     const hs = (S().hist[k] || []).slice(-10), miss = hs.length ? hs.filter(x => x.r !== "own").length / hs.length : 0.3;
-    const age = (Date.now() - ((S().last || {})[k] || 0)) / 864e5;
-    return 1 + 3 * miss + Math.min(2, age / 7) + (st().tarps[k] ? 1 : 0);
+    return 1 + 3 * miss + Math.min(2, age / 7) + tarp;
   }
   /* 8 keys: weighted picks without repeats while there are enough days, both subjects in the mix, never the same day twice in a row */
   function chooseKeys() {
@@ -94,7 +102,7 @@ export function createStorms({ h, save, prog, valley, toast, sfx = () => {} }) {
   function face() {
     const s = st(); if (!s.pending) { s.pending = { kind: ORDER[(s.count || 0) % ORDER.length], at: today() }; save.commit(); }
     const keys = chooseKeys(); if (!keys.length) { toast("Master a day first, then your valley can face a storm."); return; }
-    Q = { kind: s.pending.kind, keys, i: 0, right: 0, hits: [], wrongKeys: [], gold: 0 };
+    Q = { kind: s.pending.kind, keys, i: 0, right: 0, wrongKeys: [], gold: 0, used: new Set() };
     valley.open({ then: () => { valley.weather(Q && KINDS[Q.kind].fx, Q && Q.kind === "storm"); intro(); }, onClose: () => { drop(); Q = null; } });
   }
   function drop() { if (ov) { ov.remove(); ov = null; } }
@@ -111,12 +119,12 @@ export function createStorms({ h, save, prog, valley, toast, sfx = () => {} }) {
   function ask() {
     if (!Q) return;
     if (Q.i >= Q.keys.length) return finish();
-    const key = Q.keys[Q.i], T = prog.topic(key).t, q = pick(T.gen)(), K = KINDS[Q.kind];
+    const key = Q.keys[Q.i], T = prog.topic(key).t, K = KINDS[Q.kind], made = makeQ(key, Q.used), q = made.q;
     const label = `${K.e} Storm question ${Q.i + 1} of ${Q.keys.length}  ·  🛡️ ${Q.right} defended`;
     // first: which topic is this?
     const others = shuffle(pool().filter(k => k !== key)), same = others.filter(k => subj(k) === subj(key)), diff = others.filter(k => subj(k) !== subj(key));
     const tiles = shuffle([key, ...same.slice(0, 2), ...diff.slice(0, 1)].concat(others).filter((k, i, a) => a.indexOf(k) === i).slice(0, 4));
-    const fb = h("div"), nowBtn = h("button", { class: "btn primary hide", type: "button", onclick: () => { sfx("click"); answer(key, q, label); } }, "Now answer it ▸");
+    const fb = h("div"), nowBtn = h("button", { class: "btn primary hide", type: "button", onclick: () => { sfx("click"); answer(key, q, label, made.card); } }, "Now answer it ▸");
     const opts = h("div", { class: "opts col ideas" }, ...tiles.map(k => h("button", { class: "opt", type: "button", "data-k": k, onclick: e => {
       opts.querySelectorAll("button").forEach(b => (b.disabled = true)); const ok = k === key; e.currentTarget.classList.add(ok ? "ok" : "no"); opts.querySelector(`[data-k="${CSS.escape(key)}"]`).classList.add("ok");
       if (ok) { sfx("correct"); fb.className = "verdict good"; fb.innerHTML = "<b>Yes!</b> Knowing which idea to use is half the battle."; }
@@ -127,12 +135,19 @@ export function createStorms({ h, save, prog, valley, toast, sfx = () => {} }) {
     body.append(opts, fb, nowBtn); sheet(body);
     window.__fdq = { type: "pick", obj: { ans: key, q } };
   }
-  function answer(key, q, label) {
+  /* a question for a day: from a review card that is due or struggling when there is one (it then counts as that card's review) */
+  function makeQ(key, used = new Set()) {
+    const T = prog.topic(key).t, ci = cardInfo(key);
+    const c = ci && ci.want.filter(x => !used.has(x.d.id) && x.d.t.gen && x.d.t.gen[x.d.i])[0];
+    if (c) { used.add(c.d.id); try { return { q: c.d.t.gen[c.d.i](), card: c.d.id }; } catch (e) {} }
+    return { q: pick(T.gen)(), card: null };
+  }
+  function answer(key, q, label, card) {
     if (!Q) return; let res = null;
     window.__fdq = { type: "own", obj: q };
     const qc = QuestionCard(q, "own", r => {
-      res = r; prog.record(key, r);
-      const nb = qc.querySelector(".btn.primary:last-child") || qc.lastElementChild;
+      res = r; prog.record(key, r); if (card && cards) { try { cards.answer(card, r, { q: q.q }); } catch (e) {} }
+      const nb = qc.lastElementChild;
       if (nb) nb.textContent = r === "wrong" ? "Continue ▸" : "🛡️ Defend! ▸";
     }, () => after(key, res));
     qc.prepend(h("div", { class: "eyebrow" }, label));
@@ -177,8 +192,8 @@ export function createStorms({ h, save, prog, valley, toast, sfx = () => {} }) {
     const x = h("button", { class: "chip icon vx", type: "button", "aria-label": "Close", onclick: () => { sfx("click"); drop(); } }, "✕");
     const next = () => {
       paint(); if (hits >= 2) return done();
-      const q = pick(T.gen)(); window.__fdq = { type: "own", obj: q };
-      area.replaceChildren(QuestionCard(q, "own", r => { prog.record(key, r); if (r === "own") { hits++; sfx("correct"); } else sfx("wrong"); paint(); }, next));
+      const made = makeQ(key), q = made.q; window.__fdq = { type: "own", obj: q };
+      area.replaceChildren(QuestionCard(q, "own", r => { prog.record(key, r); if (made.card && cards) { try { cards.answer(made.card, r, { q: q.q }); } catch (e) {} } if (r === "own") { hits++; sfx("correct"); } else sfx("wrong"); paint(); }, next));
     };
     const done = () => { delete st().tarps[key]; S().gold = (S().gold || 0) + 10; save.commit(); drop(); valley.refresh(); valley.defend(key, true, "Roof mended! +10 🪙"); sfx("repair"); };
     sheet(h("div", { class: "card stack pop", style: "position:relative" }, x, h("div", { class: "eyebrow" }, "🧰 Mend the roof · " + labelOf(key)),
