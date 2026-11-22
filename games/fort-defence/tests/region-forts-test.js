@@ -7,7 +7,7 @@ const log=(...a)=>console.log(...a);
  await p.click('.btn.pulse'); await p.waitForSelector('.dawn .go-day'); await p.evaluate(()=>__fd.demoFort());
  log('1 start', JSON.stringify(await st()));
  // beat Letter Land
- await p.evaluate(()=>{ const S=__fd.save.state; for(let i=1;i<=8;i++){ S.lv[String(i)]={stars:3,train:true}; S.learnDone[String(i)]=true; } S.bosses['1']={won:true,best:9}; __fd.save.commit(); __fd.dawnScreen(); });
+ await p.evaluate(()=>{ const S=__fd.save.state; for(let i=1;i<=8;i++){ S.lv[String(i)]={stars:3,train:true}; S.learnDone[String(i)]=true; } S.bosses['1']={won:true,best:9}; S.cardsV=1; __fd.save.commit(); __fd.dawnScreen(); });
  await p.waitForTimeout(1500); log('2 after the Guardian', JSON.stringify(await st()), '|', await p.locator('.dsub').textContent());
  await p.screenshot({path:require('path').join(require('os').tmpdir(),'region2-empty.png')});
  await p.evaluate(()=>{ __fd.fort.place('wall',3,3); __fd.fort.place('arrow',4,3); __fd.save.commit(); });
