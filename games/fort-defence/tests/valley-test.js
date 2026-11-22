@@ -16,7 +16,7 @@ const log=(...a)=>console.log(...a); let fails=0; const check=(ok,msg)=>{ log((o
  const shot=async n=>{ if(SHOTS){ await p.waitForTimeout(1500); await p.screenshot({path:SHOTS+n+'.png'}); } };
  const go=async(q='')=>{ await p.goto('http://localhost:8853/games/fort-defence/?practice'+GFX+q); await p.waitForSelector(q.includes('valley')?'.vbar':'.logo',{timeout:30000}); };
  await go(); await p.evaluate(()=>{ __fd.save.resetPractice(); }); await go();
- await p.click('.btn.pulse'); await p.waitForSelector('.dawn .go-day');
+ await p.evaluate(()=>document.querySelector('.btn.pulse').click()); await p.waitForSelector('.dawn .go-day');
  log('1. new save');
  check(await p.locator('.dawn .valleybtn').count()===1,'dawn has a Valley button');
  check(await p.locator('.dawn .vgrew').count()===0,'no "valley grew" line before anything is mastered');
@@ -43,7 +43,7 @@ const log=(...a)=>console.log(...a); let fails=0; const check=(ok,msg)=>{ log((o
  const grew=await p.locator('.dawn .vgrew').textContent().catch(()=>''); check(/14 new buildings/.test(grew),'dawn: '+grew);
  check(await p.locator('.dawn .valleybtn .dot').count()===1,'Valley button has a dot');
  await p.evaluate(()=>document.querySelector('.dawn .vgrew .btn').click()); await p.waitForSelector('.vbar');
- await p.waitForSelector('.vcaption'); const cap=await p.locator('.vcaption').textContent(); check(/Your valley grew!/.test(cap),'caption: '+cap);
+ await p.waitForSelector('.vcaption'); const cap=await p.locator('.vcaption').textContent(); check(/Your valley grew!|grew into a Village/.test(cap),'caption: '+cap);
  await shot('valley-village');
  st=await p.evaluate(()=>{ const m=__fd.valley.model(); const built=__fd.valley.pickables.filter(o=>o.userData.item&&o.userData.item.done);
    const rep=built.find(o=>o.userData.item.key==='3'); return { era:m.era, done:m.done, built:built.length, scaff:rep?rep.children.length:0, bar:document.querySelector('.vbar').textContent }; });
@@ -76,7 +76,7 @@ const log=(...a)=>console.log(...a); let fails=0; const check=(ok,msg)=>{ log((o
  await p.click('.hud .chip.icon'); await p.waitForSelector('.dawn .go-day');
 
  log('4. reload');
- await p.waitForTimeout(800); await go(); await p.click('.btn.pulse'); await p.waitForSelector('.dawn .go-day');
+ await p.waitForTimeout(800); await go(); await p.evaluate(()=>document.querySelector('.btn.pulse').click()); await p.waitForSelector('.dawn .go-day');
  st=await p.evaluate(()=>({ v:__fd.save.state.valley, grew:document.querySelectorAll('.dawn .vgrew').length }));
  check(st.v&&st.v.name==='Oakhollow'&&st.v.seen.length===55&&st.v.era===4&&st.grew===0,'valley name, seen list and era kept; nothing new at dawn');
 

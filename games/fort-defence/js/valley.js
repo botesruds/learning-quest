@@ -10,7 +10,7 @@
    - It never gates anything and needs nothing managed: he can only look, turn the view and tap.
    Drawn with its own 3D stage (same blocky style as the forts); the fort's stage pauses while the valley is open. */
 import { THREE, createStage, block, group, mat, isTouch, reducedMotion, lowGfx } from "./gfx.js";
-import { makeTree, makeCloud, makeFlower, REGION_LOOK } from "./models.js";
+import { makeTree, makeFlower, REGION_LOOK } from "./models.js";
 import { mergeGeometries } from "../vendor/addons/BufferGeometryUtils.js";
 import { PACKS } from "../packs/index.js";
 import { STRATEGIES } from "../packs/reading/strategies.js";
@@ -248,20 +248,22 @@ export function createValley({ ui, h, save, prog, day, library, scribe, toast, s
     const N = HALF * 2, tiles = new THREE.InstancedMesh(new THREE.BoxGeometry(0.98, 0.3, 0.98), mat(0xffffff), N * N);
     tiles.receiveShadow = !lowGfx;
     const grass = [0x7cc35a, 0x76c257, 0x72c055, 0x6fbf55, 0x6cbe55][era], col = new THREE.Color(), dm = new THREE.Object3D();
-    const meadowFields = [];
+    const meadowFields = [], near = new Set();   // lanes show only beside plots that are built on (or signposted)
+    m.quarters.forEach(q => { const plots = plotsFor(q.slot), list = m.items.filter(i => i.q === q), n = Math.min(plots.length, list.filter(i => i.done).length + 1);
+      plots.slice(0, n).forEach(([x, z]) => { for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) near.add((x + a) + "," + (z + b)); }); });
     let k = 0;
     for (let tx = -HALF; tx < HALF; tx++) for (let tz = -HALF; tz < HALF; tz++) {
       const kind = tileKind(tx, tz, used); let c = grass;
       if (kind === "road") c = era === 0 ? grass : era === 1 ? 0xb8935f : ((tx + tz) & 1 ? 0xbdb6a4 : 0xc6bfad);
-      else if (kind === "lane") c = era === 0 ? grass : era === 1 ? 0xc4a171 : 0xd0c8b2;
+      else if (kind === "lane") c = era === 0 || !near.has(tx + "," + tz) ? grass : era === 1 ? 0xc4a171 : 0xd0c8b2;
       else if (kind === "square") c = era === 0 ? (Math.hypot(tx + 0.5, tz + 0.5) < 2.6 ? 0xb8935f : grass) : era === 1 ? 0xc4a171 : ((tx + tz) & 1 ? 0xcfc8b6 : 0xd8d1c0);
       else if (kind === "meadow") meadowFields.push([tx, tz]);
       col.set(c); if (kind === "grass" || kind === "plot" || kind === "meadow" || (era === 0 && c === grass)) col.offsetHSL(0, 0, ((tx + tz) & 1) ? 0.015 : -0.015);
       dm.position.set(tx + 0.5, -0.15, tz + 0.5); dm.updateMatrix(); tiles.setMatrixAt(k, dm.matrix); tiles.setColorAt(k, col); k++;
     }
     world.add(tiles);
-    world.add(block(N, 2.2, N, 0x8a5a36, 0, -2.5, 0, { r: 0.1, cast: false }));
-    world.add(block(N + 14, 0.2, 7, 0x2fa7e6, 0, -0.55, HALF + 3.5, { r: 0, cast: false, receive: false }));
+    world.add(block(N, 2.2, N + 5, 0x8a5a36, 0, -2.5, 2.5, { r: 0.1, cast: false }));
+    world.add(block(N, 0.3, 5, 0x2fa7e6, 0, -0.42, HALF + 2.5, { r: 0, cast: false, receive: false }));
 
     // the quarters: one building per thing mastered, a signpost for what is next
     m.quarters.forEach(q => {
@@ -278,6 +280,7 @@ export function createValley({ ui, h, save, prog, day, library, scribe, toast, s
         } else if (!nextShown) { nextShown = true; obj = signpost(q.col); obj.rotation.y = 0.6; it.next = true; }
         else if (era >= 1 && q.slot !== "NW" && q.slot !== "NE" && (i % 2 === 0)) { /* empty tower plots become gardens */ obj = field(era >= 2); }
         if (!obj) return;
+        obj.userData.s = it.done ? 1.22 : 1.5; obj.scale.setScalar(obj.userData.s);
         obj.position.set(x, 0, z); obj.userData.item = it; it.obj = obj; world.add(obj);
         if (it.done || it.next) pickables.push(obj);
       });
@@ -292,7 +295,7 @@ export function createValley({ ui, h, save, prog, day, library, scribe, toast, s
     const fieldSpots = meadowFields.filter(([x, z]) => (x % 3 !== 2) && (z % 3 !== 2)).sort((a, b) => Math.hypot(a[0], a[1]) - Math.hypot(b[0], b[1]));
     fieldSpots.slice(0, [0, 6, 10, 14, 18][era]).forEach(([x, z]) => add(field(era >= 2), x + 0.5, z + 0.5));
     if (era >= 1) { add(windmill(), -15.5, 2.5, eraTip("🌾 The windmill", 1), Math.PI / 2); add(stall(0xe34b4b), -2.6, 2.6, eraTip("🧺 The market", 1)); add(stall(0x2f6fde), 2.6, -2.6, eraTip("🧺 The market", 1), Math.PI); add(stall(0xf2b134), -2.6, -2.6, eraTip("🧺 The market", 1), Math.PI); }
-    if (era >= 2) { add(fountain(), 0, 1.5, eraTip("⛲ The fountain", 2)); add(block(0.8, 0.12, 3.4, 0x8a6440, 0, -0.3, 0, { r: 0.02 }), 10.5, HALF + 1.2, eraTip("⚓ The harbour", 2)); add(boat(), 11.6, HALF + 2.4, eraTip("⚓ The harbour", 2)); }
+    if (era >= 2) { add(fountain(), 0, 1.5, eraTip("⛲ The fountain", 2)); add(block(0.8, 0.12, 3.4, 0x8a6440, 0, -0.04, 0, { r: 0.02 }), 10.5, HALF + 1.4, eraTip("⚓ The harbour", 2)); add(boat(), 11.6, HALF + 2.4, eraTip("⚓ The harbour", 2)); }
     if (era >= 3) {
       for (let v = -14; v <= 14; v += 4) [[-6.3, v], [6.3, v], [v, -6.3], [v, 6.3]].forEach(([x, z]) => { if (Math.abs(x) > 5 && Math.abs(z) > 5) return; add(lamp(), x + 0.5, z + 0.5); });
       for (let x = -15; x <= 15; x += 2.5) world.add(block(0.35, 1.7, 0.6, 0xc9c4b6, x, 0, -HALF + 0.6, { r: 0.04 }));
@@ -327,7 +330,6 @@ export function createValley({ ui, h, save, prog, day, library, scribe, toast, s
     }
     const busy = new Set(); world.children.forEach(o => busy.add(Math.floor(o.position.x) + "," + Math.floor(o.position.z)));
     trees.filter(([x, z]) => !busy.has(x + "," + z)).forEach(([x, z]) => { const t = makeTree(rnd, [0x3fae4a, 0x5cc556, 0x2f9a45]); t.scale.setScalar(0.42); t.position.set(x + 0.5, 0, z + 0.5); world.add(t); });
-    for (let i = 0; i < 5; i++) { const c = makeCloud(rnd); c.scale.setScalar(0.8); c.position.set((rnd() - 0.5) * 60, 16 + rnd() * 4, (rnd() - 0.5) * 50); c.userData.update = dt => { c.position.x += dt * 0.6; if (c.position.x > 40) c.position.x = -40; }; world.add(c); }
 
     // villagers walk the roads (more as his stars grow)
     const count = Math.min(lowGfx ? 6 : isTouch ? 26 : 40, 3 + Math.floor(m.totalStars * 0.27));
@@ -374,8 +376,8 @@ export function createValley({ ui, h, save, prog, day, library, scribe, toast, s
   function pop(dt) {
     if (!popping.length) return;
     popT += dt;
-    popping.forEach(p => { const k = Math.max(0, Math.min(1, (popT - p.at) / 0.45)); p.obj.scale.setScalar(k <= 0 ? 0.001 : k < 1 ? Math.max(0.001, k * (1 + 0.3 * Math.sin(k * Math.PI))) : 1); if (!p.played && k > 0) { p.played = true; sfx(p.big ? "horn" : "place"); } });
-    if (popping.every(p => popT > p.at + 0.5)) { popping.forEach(p => p.obj.scale.setScalar(1)); popping = []; }
+    popping.forEach(p => { const k = Math.max(0, Math.min(1, (popT - p.at) / 0.45)); p.obj.scale.setScalar((p.obj.userData.s || 1) * (k <= 0 ? 0.001 : k < 1 ? Math.max(0.001, k * (1 + 0.3 * Math.sin(k * Math.PI))) : 1)); if (!p.played && k > 0) { p.played = true; sfx(p.big ? "horn" : "place"); } });
+    if (popping.every(p => popT > p.at + 0.5)) { popping.forEach(p => p.obj.scale.setScalar(p.obj.userData.s || 1)); popping = []; }
   }
   function popIn(list, gap) {
     popT = 0; popping = list.filter(i => i.obj).map((i, n) => ({ obj: i.obj, at: 0.6 + n * gap, big: i.kind !== "day" && i.kind !== "floor" }));
@@ -384,7 +386,7 @@ export function createValley({ ui, h, save, prog, day, library, scribe, toast, s
   }
 
   /* ---------- turning, zooming and tapping ---------- */
-  const VIEW = { yaw: 0.75, pitch: 0.74, dist: isTouch ? 50 : 42, target: new THREE.Vector3(0, 0, 1.5) };
+  const VIEW = { yaw: 0.75, pitch: 0.8, dist: isTouch ? 50 : 42, target: new THREE.Vector3(0, -1, 1.5) };
   function controls() {
     const pts = new Map(); let moved = 0, pinch0 = 0, dist0 = 0;
     canvas.addEventListener("pointerdown", e => { pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); moved = 0; stage.rig.autoSpin = 0; if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); dist0 = stage.rig.dist; } try { canvas.setPointerCapture(e.pointerId); } catch (er) {} });
@@ -393,11 +395,11 @@ export function createValley({ ui, h, save, prog, day, library, scribe, toast, s
       const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
       const R = stage.rig;
       if (pts.size === 1) { R.goal = null; R.yaw -= dx * 0.006; R.pitch = Math.max(0.38, Math.min(1.25, R.pitch + dy * 0.004)); }
-      else if (pts.size === 2 && pinch0) { const [a, b] = [...pts.values()]; R.goal = null; R.dist = Math.max(20, Math.min(64, dist0 * pinch0 / Math.max(20, Math.hypot(a.x - b.x, a.y - b.y)))); }
+      else if (pts.size === 2 && pinch0) { const [a, b] = [...pts.values()]; R.goal = null; R.dist = Math.max(20, Math.min(80, dist0 * pinch0 / Math.max(20, Math.hypot(a.x - b.x, a.y - b.y)))); }
     });
     const up = e => { const had = pts.delete(e.pointerId); if (had && moved < 8 && pts.size === 0) pick(e); if (pts.size < 2) pinch0 = 0; };
     canvas.addEventListener("pointerup", up); canvas.addEventListener("pointercancel", e => pts.delete(e.pointerId));
-    canvas.addEventListener("wheel", e => { e.preventDefault(); stage.rig.goal = null; stage.rig.dist = Math.max(20, Math.min(64, stage.rig.dist * (1 + Math.sign(e.deltaY) * 0.08))); }, { passive: false });
+    canvas.addEventListener("wheel", e => { e.preventDefault(); stage.rig.goal = null; stage.rig.dist = Math.max(20, Math.min(80, stage.rig.dist * (1 + Math.sign(e.deltaY) * 0.08))); }, { passive: false });
   }
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
   function pick(e) {
@@ -477,15 +479,15 @@ export function createValley({ ui, h, save, prog, day, library, scribe, toast, s
     const firstTime = !v.toured;
     if (firstTime) {
       const all = m.items.filter(i => i.done);
-      Object.assign(stage.rig, { dist: 70, pitch: 1.15 }); stage.flyTo({ dist: VIEW.dist, pitch: VIEW.pitch }, 3.2);
+      Object.assign(stage.rig, { dist: 80, pitch: 1.2 }); stage.flyTo({ dist: VIEW.dist, pitch: VIEW.pitch }, 3.2);
       popIn(all, Math.min(0.25, 3.5 / Math.max(1, all.length)));
       say(all.length ? "This is your valley. Everything here, you built by learning." : "This is your valley. Master your first day and the first house goes up!", 6000);
       v.toured = true;
     } else if (fresh.length) {
-      popIn(fresh, 0.7);
+      popIn(fresh, Math.min(0.7, 4 / fresh.length));
       const f = fresh[0], what = f.kind === "lord" || f.kind === "final" ? "a tower for " + f.title.replace(/^Beat /, "beating ") : "a new building for " + (f.kind === "floor" ? f.label : f.label.replace(/^.* · /, "")) + ": " + f.title;
       say("Your valley grew! " + (fresh.length > 1 ? fresh.length + " new buildings, including " : "") + what + ".", 5200);
-      if (f.obj) setTimeout(() => open_ && focus(f.obj, 26), 400);
+      if (f.obj && fresh.length <= 3) setTimeout(() => open_ && focus(f.obj, 30), 400);   // a big batch keeps the whole valley in view
     }
     if ((v.era || 0) < m.era && !firstTime) { setTimeout(() => { if (open_) { sfx("horn"); say(ERAS[m.era].grew, 5000); } }, fresh.length ? 2600 : 300); }
     v.era = m.era; v.seen = m.items.filter(i => i.done).map(i => i.id); v.v = 1;
