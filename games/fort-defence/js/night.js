@@ -12,7 +12,7 @@
 import { THREE, block, reducedMotion, isTouch } from "./gfx.js";
 import { makeDemon, makeLord } from "./models.js";
 import { PIECES } from "./pieces.js";
-import { h, pick, shuffle, esc, SayBtn } from "./qcore.js";
+import { h, pick, shuffle, esc, SayBtn, qStem } from "./qcore.js";
 import { ExplainCard } from "./think.js";
 import { QuestionCard, AnswerBox, ConfidenceRow, attachConfidence, confNote } from "./qui.js";
 import { COMMANDS } from "../packs/commands.js";
@@ -385,7 +385,7 @@ export function createNight({ stage, fx, fort, island, save, prog, cards, ui, to
       /* "Which idea is this?": he names the day first, then answers. A right pick earns a crystal; a wrong one shows how to tell. */
       const pool = r.patrol ? roadKeys().filter(k => prog.stars(k) >= 3 && usable(k)).concat(N.key) : r.pool;
       const tiles = ideaTiles(r.key, [...new Set(pool)]), q = r.obj, body = h("div", { class: "card stack pop" }), fb = h("div");
-      body.append(h("div", { class: "eyebrow" }, label), h("div", { class: "qs" }, "🧭 Which idea is this?"), h("div", { class: "qs small", html: q.q }));
+      body.append(h("div", { class: "eyebrow" }, label), h("div", { class: "qs" }, "🧭 Which idea is this?"), h("div", { class: "qs small", html: qStem(q) }));
       if (q.v) body.append(q.v());
       const go = h("button", { class: "btn primary hide", type: "button", onclick: () => { r.picked = true; ov.remove(); N.frozen = false; N.runeReady = true; tapRune(); } }, "Now answer it ▸");
       const opts = h("div", { class: "opts col ideas" }, ...tiles.map(t => h("button", { class: "opt", type: "button", "data-k": t.k, onclick: e => {

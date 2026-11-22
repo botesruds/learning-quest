@@ -227,7 +227,12 @@ export function createScribe({ save, prog, day, toast, onChange }) {
           h("button", { class: "btn primary", type: "button", onclick: goNext }, k < fields.length - 1 ? "Next part ▸" : "See it all ▸"))));
       setTimeout(() => { try { ta.focus({ preventScroll: true }); } catch (e) {} }, 60);
     }
-    const joined = () => fields.map(f => sentence(f.pre ? `${o.it.fact}${f.pre === "because" ? "" : ","} ${f.pre} ${val[f.id]}` : f.id === "end" ? `${o.it.stem.replace(/…$/, "")} ${val[f.id]}` : val[f.id]));
+    /* he often types the whole sentence, starter and all: drop the part we add ourselves so it isn't said twice */
+    const norm = t => String(t || "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+    const tail = (v, ...leads) => { let t = String(v || "").trim();
+      for (const lead of leads) { const L = norm(lead); if (!L) continue; const words = t.split(/\s+/); for (let n = 1; n <= words.length; n++) { const head = norm(words.slice(0, n).join(" ")); if (head === L) { t = words.slice(n).join(" ").replace(/^[,;:]\s*/, ""); break; } if (head.length > L.length) break; } }
+      return t; };
+    const joined = () => fields.map(f => sentence(f.pre ? `${o.it.fact}${f.pre === "because" ? "" : ","} ${f.pre} ${tail(val[f.id], o.it.fact, f.pre)}` : f.id === "end" ? `${o.it.stem.replace(/…$/, "")} ${tail(val[f.id], o.it.stem.replace(/…$/, ""))}` : val[f.id]));
     /* the whole piece, in colour */
     function review() {
       const text = joined(), checks = o.kind === "peel" ? [

@@ -41,6 +41,9 @@ function terms(list){
 }
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const M=s=>`<span class="m">${s}</span>`;
+/* the question as one line of HTML, for screens that ask "Which idea is this?" before the answer box is shown.
+   A fill-the-gap question's text lives in its gap, so it is added here (otherwise all he sees is "Fill the gap."). */
+const qStem=q=>{const a=q&&q.final&&q.final.a; let s=(q&&q.q)||""; if(a&&a.gap&&a.gap.text) s+=`<br>${esc(a.gap.text).replace(/_{2,}/g,"_____")}`; return s;};
 const gcd=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b];}return a;};
 
 /* ================= expression parser ================= */
@@ -164,4 +167,4 @@ function checkEq(want,got){
   const ok=equiv(`(${a})-(${b})`,`(${c})-(${d})`)||equiv(`(${a})-(${b})`,`(${d})-(${c})`);
   return {ok};
 }
-export { lev, h, H, ri, pick, shuffle, nz, MINUS, N, P, sgn, co, lin, terms, esc, M, gcd, tokenize, parse, evalT, varsOf, stripLHS, numVal, equiv, topTerms, isSimplified, checkAns, speakable, say, SayBtn, checkEq };
+export { lev, h, H, ri, pick, shuffle, nz, MINUS, N, P, sgn, co, lin, terms, esc, M, gcd, tokenize, parse, evalT, varsOf, stripLHS, numVal, equiv, topTerms, isSimplified, checkAns, speakable, say, SayBtn, checkEq, qStem };
