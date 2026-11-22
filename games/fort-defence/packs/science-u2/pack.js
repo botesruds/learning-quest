@@ -4,6 +4,18 @@ import { STEPS, PREVIEWS, FINAL_TOPICS, BADGES } from "./topics.js";
 import { UNDERSTANDING } from "./understanding.js";
 import { DISPATCHES } from "./reading.js";
 import { REPORTS } from "./writing.js";
+import { GAPS, SPW, EXPLAIN, MAPS } from "./think.js";
+import { shuffle } from "../../js/qcore.js";
+
+/* thinking tasks (js/think.js): each day gets a fill-the-gap card at the end of its lesson and a fill-the-gap
+   question maker in Train, Challenge and night runes (typed once the day has 3 stars) */
+STEPS.forEach(t => {
+  const g = GAPS[t.id]; if (!g) return;
+  const full = x => x.ans.reduce((s, a) => s.replace("___", a), x.text);
+  t.learn.push({ t: "try", h: "Your turn: fill the gaps", q: { ask: "Tap the words to fill the gaps.", gap: g[0], why: full(g[0]) } });
+  t.gen.push(() => { const x = g[Math.floor(Math.random() * g.length)]; return { q: "Fill the gap.", steps: [], final: { p: "", a: { gap: { ...x, bank: shuffle(x.bank), key: "sci2:" + t.id } }, hint: "Read the whole sentence first, then pick the words that fit." }, why: full(x) }; });
+});
+BADGES.push({ k: "sci2:map1", e: "🗺️", n: "Cell City Mapmaker", d: "Build the Cell City mind-map" });
 
 export default {
   id: "science-u2",
@@ -19,6 +31,7 @@ export default {
   // pairs of days that are easy to mix up: a patrol rune on the first day prefers one of these (interleaving)
   confusable: { 3: [2], 5: [2], 6: [2], 8: [7], 9: [7], 10: [7], 11: [10], 12: [10, 7] },
   reading: { dispatches: DISPATCHES },   // the Library tower's readings, one per day (js/library.js)
+  think: { gaps: GAPS, spw: SPW, explain: EXPLAIN, maps: MAPS },   // thinking tasks (js/think.js)
   writing: { reports: REPORTS },         // the Scribe's Tower royal reports, one per day (js/scribe.js)
   regions: [
     { n: 1, name: "Cell City", emoji: "🦠", look: 6, blurb: "Every living thing is built from cells, and every part has a job.", topics: [1, 2, 3, 4, 5],

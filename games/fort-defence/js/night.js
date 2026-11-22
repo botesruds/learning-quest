@@ -13,6 +13,7 @@ import { THREE, block, reducedMotion, isTouch } from "./gfx.js";
 import { makeDemon, makeLord } from "./models.js";
 import { PIECES } from "./pieces.js";
 import { h, pick, shuffle, esc, SayBtn } from "./qcore.js";
+import { ExplainCard } from "./think.js";
 import { QuestionCard, AnswerBox } from "./qui.js";
 import { sfx, playMusic } from "./audio.js";
 
@@ -83,6 +84,9 @@ export function createNight({ stage, fx, fort, island, save, prog, ui, toast, on
     const quick = pat.length ? pat.map(k => ({ type: "quick", obj: pick(prog.topic(k).t.gen)(), key: k, patrol: true }))
       : (tp.t.gen || []).length ? [0, 1].map(() => ({ type: "quick", obj: pick(tp.t.gen)(), key })) : [];
     // the 4 Brain check runes, with the 2 quick runes at random places among them (never first, never side by side)
+    // one Brain check rune is an "Explain it" typed answer when the pack has one for today (js/think.js)
+    const ex = tp.pack.think && tp.pack.think.explain && tp.pack.think.explain[tp.t.id];
+    if (ex && checks.length >= 4) checks[Math.floor(Math.random() * checks.length)] = { explain: ex };
     const runes = checks.map(c => ({ type: "brain", obj: c, key }));
     const spots = shuffle([1, 2, 3, 4]).slice(0, quick.length).sort((a, b) => a - b); if (spots[1] - spots[0] === 1) spots[1] = Math.min(spots[1] + 1, runes.length + 1);
     quick.forEach((q, i) => runes.splice(Math.min(spots[i] + i, runes.length), 0, q));
@@ -340,7 +344,16 @@ export function createNight({ stage, fx, fort, island, save, prog, ui, toast, on
     const label = `✨ Rune ${N.seg + 1} of ${N.runes.length} · ${r.type === "brain" ? (N.siege ? "🧠 Why question" : "🧠 Brain check") : N.siege ? "⚔️ One try" : r.patrol ? "🛡️ Patrol: an earlier day" : "⚡ Quick-fire"}`;
     let result = null;
     const resume = () => { ov.remove(); N.frozen = false; N.runeDone = true; N.after = 0; if (result === "right" || result === "half") strike(result === "half" ? 0.55 : 1); else fizzle(r.key); paintHud(); };
-    if (r.type === "brain") {
+    if (r.type === "brain" && r.obj.explain) {
+      const nx = h("button", { class: "btn primary hide", type: "button", onclick: resume }, "✨ Cast the rune");
+      const ec = ExplainCard(r.obj.explain, save, res => {
+        result = res === "right" ? "right" : "wrong";
+        if (result === "right") { N.brain.right++; if (N.siege) N.hits++; N.crystal++; S().mats.crystal = (S().mats.crystal || 0) + 1; save.commit(); sfx("correct"); }
+        else { sfx("wrong"); nx.textContent = "Continue"; }
+        prog.record(r.key, result === "right" ? "own" : "wrong"); nx.classList.remove("hide"); setTimeout(() => nx.focus({ preventScroll: true }), 50);
+      }, { label: label + " · ✍️ Explain it", key: r.key });
+      card.append(ec, nx); window.__fdq = { type: "explain", obj: r.obj.explain };
+    } else if (r.type === "brain") {
       const c = r.obj, body = h("div", { class: "card stack pop" });
       body.append(h("div", { class: "eyebrow" }, label), h("div", { class: "qs" }, c.q));
       const fb = h("div"), nx = h("button", { class: "btn primary hide", type: "button", onclick: resume }, "✨ Cast the rune");

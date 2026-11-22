@@ -21,6 +21,7 @@ const RUBRIC = {
   cmd: [["Answer 1", "The first answer is the right kind and size for its command word (state = short answer, describe = what it is like or what happens, explain = how or why with a reason, compare = alike, contrast = different) and is true."], ["Answer 2", "The second answer is the right kind and size for its command word and is true."]],
   pe: [["Point", "One sentence answers the question directly, using its key words."], ["Evidence", "A correct, relevant fact, number or example from the topic backs the Point."], FACTS],
   el: [["Explain", "Says how or why the Evidence proves the Point (usually with because, this shows that, so or which means). Repeating the Evidence or adding a new fact is not yet."], ["Link", "A last sentence ties back to the question, using its words."], FACTS],
+  explain: [["Explains it", "The answer finishes the sentence starter with the same key ideas as the model answer (all of them), correctly and in his own words. Different wording is fine."], FACTS],
   peel: [["Point", "One sentence answers the question directly, using its key words."], ["Evidence", "A correct, relevant fact, number or example from the topic backs the Point."], ["Explain", "Says how or why the Evidence proves the Point (usually with because, this shows that, so or which means). Repeating the Evidence or adding a new fact is not yet."], ["Link", "A last sentence ties back to the question, using its words."], FACTS],
 };
 

@@ -39,10 +39,14 @@ const log=(...a)=>console.log(...a);
      const v=await p.locator('.runecard .verdict').last().textContent(); seen.push(`pick${wrongPick?'✗':'✓'}(${tiles} tiles: ${v.slice(0,40)})`);
      await p.evaluate(()=>[...document.querySelectorAll('.runecard button.btn.primary:not(.hide)')].pop().click());
      await p.waitForFunction(()=>window.__fdq&&window.__fdq.type!=='pick',null,{timeout:10000}); Q=await p.evaluate(()=>window.__fdq); }
-   if(Q.type==='brain'){ await p.locator('.runecard .opts button').nth(Q.obj.a).click(); seen.push('brain✓'); }
+   if(Q.type==='explain'){ await p.fill('.runecard textarea.exin', Q.obj.model.slice(Q.obj.starter.length)); await p.locator('.runecard button.btn.primary',{hasText:'Check'}).click(); seen.push('explain✓'); }
+   else if(Q.type==='brain'){ await p.locator('.runecard .opts button').nth(Q.obj.a).click(); seen.push('brain✓'); }
    else { const spec=Q.obj.final.a, wrong=picks===2; const lab=await p.locator('.runecard .eyebrow').first().textContent();
      await p.evaluate(([spec,wrong])=>{ const root=document.querySelector('.runecard');
        if(spec.choice){ const t=x=>x.replace(/<[^>]+>/g,''), want=t(spec.choice[spec.ans]); const bs=[...root.querySelectorAll('.opts button')]; (wrong?bs.find(b=>b.textContent!==want):bs.find(b=>b.textContent===want)).click(); if(wrong){ const b2=[...root.querySelectorAll('.opts button:not(:disabled)')].find(b=>b.textContent!==want); if(b2) b2.click(); } return; }
+       if(spec.gap){ const G=spec.gap, bad=G.bank.filter(w=>!G.ans.includes(w)), ws=wrong?G.ans.map((a,k)=>bad[k%bad.length]):G.ans, ins=[...root.querySelectorAll('.gapin:not(:disabled)')];
+         if(ins.length) ins.forEach((i,k)=>{ i.value=ws[k]; }); else ws.forEach(w=>[...root.querySelectorAll('.gapbank button:not(:disabled)')].find(x=>x.textContent===w)?.click());
+         for(let t=0;t<(wrong?2:1);t++) [...root.querySelectorAll('button.btn.primary')].filter(b=>b.textContent==='Check'&&!b.disabled).pop()?.click(); return; }
        if(spec.tap){ const parts=[...root.querySelectorAll('[data-part]')]; const go=k=>parts.find(x=>x.getAttribute('data-part')===k).dispatchEvent(new MouseEvent('click',{bubbles:true}));
          if(wrong){ const bad=parts.find(x=>x.getAttribute('data-part')!==spec.tap.ans).getAttribute('data-part'); go(bad); go(bad); } else go(spec.tap.ans); return; }
        if(spec.sort){ for(let t=0;t<(wrong?2:1);t++){ [...root.querySelectorAll('.sortrow')].forEach(r=>{ const it=spec.sort.items.find(i=>i[0]===r.querySelector('.sortit').innerHTML); r.querySelectorAll('.binb')[wrong?(it[1]+1)%spec.sort.bins.length:it[1]].click(); }); [...root.querySelectorAll('button.btn.primary')].filter(b=>b.textContent==='Check'&&!b.disabled).pop()?.click(); } return; }
