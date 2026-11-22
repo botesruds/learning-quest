@@ -114,7 +114,7 @@ export function createScribe({ save, prog, day, toast, onChange }) {
         onclick: () => { if (!op) { sfx("wrong"); toast(learnedN() ? `Finish the lesson on Day ${no} to open this report.` : "Learn floor 1 first, then the King's reports open."); return; } sfx("click"); report(r); } },
         h("span", { class: "z" }, String(no)), h("span", { class: "nm" }, r.title || `Day ${no}`), h("span", { class: "kind" }, dn ? "✓ sent" : op ? "new" : "locked")); });
     K.set(h("div", { class: "stack" },
-      h("div", { class: "mission" }, "✍️ Good writers build answers a reader can follow. Learn one writing move on each floor, then use it in reports to the King about your science days. Writing here never blocks a science day."),
+      h("div", { class: "mission" }, "✍️ Good writers build answers a reader can follow. Learn one writing move on each floor, then use it in reports to the King about your science days. Writing never blocks a science day, but each demon lord waits until that land's reports are sent."),
       next,
       h("section", { class: "qregion" }, h("h3", {}, "🏰 The six floors"), h("div", { class: "qtiles" }, ...floors)),
       h("section", { class: "qregion" }, h("h3", {}, "👑 Royal reports"), h("p", { class: "small muted" }, "The King asks about each science day once you've finished its lesson."), h("div", { class: "qtiles" }, ...reps)),
@@ -325,7 +325,7 @@ export function createScribe({ save, prog, day, toast, onChange }) {
         h("div", { class: "row", style: "gap:8px" }, earned ? h("button", { class: "btn small", type: "button", onclick: take }, "Take back the star") : h("button", { class: "btn small", type: "button", onclick: give }, "Give the star")));
     };
     return h("section", { class: "stack pc-region" }, h("h3", {}, "✍️ Scribe's Tower (writing)"),
-      h("p", { class: "small muted" }, `Its own track: it never blocks a science day. Each floor: lesson ⭐, 3 right on his own ⭐⭐, then a piece he writes himself, marked by the AI coach against the floor's rubric ⭐⭐⭐. Royal reports sent: ${nSent} of ${reports().length}.`),
+      h("p", { class: "small muted" }, `Its own track: it never blocks a science day, but a demon lord waits until that land's royal reports are sent (you can mark one here if the coach can't be reached). Each floor: lesson ⭐, 3 right on his own ⭐⭐, then a piece he writes himself, marked by the AI coach against the floor's rubric ⭐⭐⭐. Royal reports sent: ${nSent} of ${reports().length}.`),
       ...rows,
       h("h3", {}, "🗂️ Writing desk"),
       d.length ? h("p", { class: "small muted" }, "Everything he has written, newest first. You can give or take back the star on any piece.") : h("p", { class: "small muted" }, "Nothing written yet."),
