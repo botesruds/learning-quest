@@ -2,6 +2,7 @@
    Content checked by Rudi on 22 Nov 2026 (content document "Science Unit 2 content"). See packs/README.md for the format. */
 import { STEPS, PREVIEWS, FINAL_TOPICS, BADGES } from "./topics.js";
 import { UNDERSTANDING } from "./understanding.js";
+import { DISPATCHES } from "./reading.js";
 
 export default {
   id: "science-u2",
@@ -14,6 +15,7 @@ export default {
   previews: PREVIEWS,
   understanding: UNDERSTANDING,
   badges: BADGES,
+  reading: { dispatches: DISPATCHES },   // the Library tower's readings, one per day (js/library.js)
   regions: [
     { n: 1, name: "Cell City", emoji: "🦠", look: 6, blurb: "Every living thing is built from cells, and every part has a job.", topics: [1, 2, 3, 4, 5],
       lord: { name: "the Blob King", badge: "sci2:w1", questions: 8, checks: 2, need: 8 } },

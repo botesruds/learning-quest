@@ -32,9 +32,21 @@ const ARGS={args:['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ign
     if(T.kind==='invest'){ for(let n=0;n<6;n++){ try{ box.replaceChildren(pack.special.invest(()=>{},T.id,()=>{})); out.invest++; }catch(e){ F(W+' invest: '+e.message); } } }
    }
    Object.entries(pack.previews||{}).forEach(([k,pv])=>pv.cards.forEach((c,i)=>{ try{ box.replaceChildren(Q.LearnView(pv.cards,i,()=>{},()=>{},null,'x')); out.previews++; }catch(e){ F('preview '+k+' card '+i+': '+e.message); } }));
+   // Library tower dispatches: indexes in range, no duplicate choices, every day exists
+   const RQ=(w,it,q)=>{ const n=it.text.length; if(!q.s||!q.ask||!q.why) F(w+' missing s/ask/why');
+     if(q.s==='evidence'){ if(!(q.ans&&q.ans.length&&q.ans.every(i=>i>=0&&i<n))) F(w+' evidence index'); if(q.key&&!q.ans.some(i=>it.text[i].toLowerCase().includes(q.key.toLowerCase()))) F(w+' key word not in proof sentence'); }
+     else if(q.order){ if(q.order.length<2||new Set(q.order).size!==q.order.length) F(w+' order'); }
+     else { if(!(q.choice&&q.choice.length>=2)||new Set(q.choice).size!==q.choice.length) F(w+' choices'); }
+     if(q.clue!=null&&!(q.clue>=0&&q.clue<n)) F(w+' clue index'); out.reads=(out.reads||0)+1; };
+   ((pack.reading||{}).dispatches||[]).forEach(d=>{ if(!pack.topics.find(t=>t.id===d.day)) F('dispatch for missing day '+d.day); d.qs.forEach((q,i)=>RQ('dispatch '+d.day+' q'+i,d,q)); });
    // every topic on the road exists
    pack.regions.forEach(rg=>rg.topics.forEach(id=>{ if(!pack.topics.find(t=>t.id===id)) F('region '+rg.n+' lists missing topic '+id); }));
   }
+  const {STRATEGIES}=await import('/games/fort-defence/packs/reading/strategies.js');
+  STRATEGIES.forEach(st=>{ if(st.practice.length<4) F('floor '+st.n+' needs 4 practice texts'); st.practice.forEach((it,i)=>{ const q={...it,s:st.k}; const n=it.text.length;
+      if(q.s==='evidence'){ if(!(q.ans.every(j=>j>=0&&j<n))) F('floor '+st.n+' p'+i+' evidence index'); } else if(new Set(q.choice).size!==q.choice.length) F('floor '+st.n+' p'+i+' choices');
+      if(q.clue!=null&&!(q.clue>=0&&q.clue<n)) F('floor '+st.n+' p'+i+' clue'); out.reads=(out.reads||0)+1; });
+    st.lesson.forEach((c,i)=>{ try{ box.replaceChildren(Q.LearnView(st.lesson,i,()=>{},()=>{},null,'x')); }catch(e){ F('floor '+st.n+' lesson card '+i+': '+e.message); } if(c.t==='try'&&!(c.q.ans>=0&&c.q.ans<c.q.choices.length)) F('floor '+st.n+' lesson try '+i); }); });
   box.remove(); return out; });
  console.log(JSON.stringify({...r,fail:undefined})); console.log('failures:',r.fail.length); r.fail.forEach(f=>console.log('  ',f)); console.log('page errors',JSON.stringify(errs));
  await b.close(); srv.close(); })();

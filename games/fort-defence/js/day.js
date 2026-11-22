@@ -411,5 +411,8 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
     paint();
   }
 
-  return { open: open_, openChest, openMap, openShop, openParentGate, openParent, openRepair, morning, close, grant, get isOpen() { return !!sheet; }, paintLoot };
+  /* the sheet's helpers, for other screens that live on the same sheet (the Library tower) */
+  const kit = () => { if (!sheet) mountSheet(); ctx = { key: null, loot: {} }; paintLoot(); return { head, set, closeBtn, mission, celebrate, bigbtn, linkbtn, grant, lootbar }; };
+
+  return { kit, open: open_, openChest, openMap, openShop, openParentGate, openParent, openRepair, morning, close, grant, get isOpen() { return !!sheet; }, paintLoot };
 }
