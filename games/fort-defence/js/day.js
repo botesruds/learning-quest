@@ -336,7 +336,7 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
             onclick: () => { sfx("click"); if (!open) { peekAhead(n.key); return; } open_(n.key); } },
             h("span", { class: "z" }, String(prog.dayNo(n.key))), h("span", { class: "nm" }, tp.t.short), h("span", { class: "st" }, open ? (rep ? "🔧 repair" : "⭐".repeat(st) + "☆".repeat(3 - st)) : (S().peeked && S().peeked[n.key] ? "👀 peeked" : "👀 peek"))); }
         const lord = n.t === "lord" ? r.lord : r.final;
-        return h("button", { class: "qtile lord" + (open ? "" : " locked") + (done ? " done" : ""), type: "button", onclick: () => toast(done ? `You beat ${lord.name}!` : open ? `${cap(lord.name)} is waiting. Face him from the dawn screen.` : "Master every day in this region first.") }, h("span", { class: "z" }, n.t === "final" ? "🐉" : "👹"), h("span", { class: "nm" }, cap(lord.name)), h("span", { class: "kind" }, done ? "beaten" : "demon lord"));
+        return h("button", { class: "qtile lord" + (open ? "" : " locked") + (done ? " done" : ""), type: "button", onclick: () => { const td = prog.towerTodo(n); toast(done ? `You beat ${lord.name}!` : open && td.length ? `Before ${lord.name}: ${td.length} reading and writing task${td.length > 1 ? "s" : ""} to do. Start from the dawn screen.` : open ? `${cap(lord.name)} is waiting. Face him from the dawn screen.` : "Master every day in this region first, then do its reading and reports."); } }, h("span", { class: "z" }, n.t === "final" ? "🐉" : "👹"), h("span", { class: "nm" }, cap(lord.name)), h("span", { class: "kind" }, done ? "beaten" : "demon lord"));
       });
       const locked = !nodes.some(n => n.t !== "chest" && prog.nodeOpen(n));
       const fk = r.look || r.n, F = S().forts && S().forts[fk], built = F && F.pieces && F.pieces.length;
@@ -415,7 +415,7 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
         const L = S().lib || {}, fl = L.fl || {}, rd = L.rd || {}, ds = prog.pack.reading.dispatches;
         const nRead = ds.filter(d => rd[prog.keyOf(prog.pack, d.day)] && rd[prog.keyOf(prog.pack, d.day)].done).length;
         parts.push(h("section", { class: "stack pc-region" }, h("h3", {}, "📚 Library tower (reading)"),
-          h("p", { class: "small muted" }, `Its own track: it never blocks a science day. Each floor teaches one reading strategy (lesson ⭐, 3 right on his own ⭐⭐, a mixed check where he names the strategy ⭐⭐⭐). Dispatches read: ${nRead} of ${ds.length}.`),
+          h("p", { class: "small muted" }, `Its own track: it never blocks a science day, but a demon lord waits until that land's dispatches are read. Each floor teaches one reading strategy (lesson ⭐, 3 right on his own ⭐⭐, a mixed check where he names the strategy ⭐⭐⭐). Dispatches read: ${nRead} of ${ds.length}.`),
           ...STRATEGIES.map(st => { const f = fl[st.k] || {}, n = f.stars || 0;
             return h("div", { class: "pc-row" }, h("b", { class: "pc-day" }, st.icon), h("div", { class: "pc-t" }, h("b", {}, `Floor ${st.n}: ${st.name}`), h("div", { class: "small muted" }, st.does)),
               h("span", { class: "pc-st", "aria-label": n + " stars" }, "⭐".repeat(n) + "☆".repeat(3 - n)), dots("lib:" + st.k)); })));

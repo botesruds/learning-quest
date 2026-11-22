@@ -70,6 +70,29 @@ export function createProgress(getS, commit, pack0 = activePack()) {
     return true;
   }
   const lordReady = (pack, r) => r.topics.every(id => !S().repair[keyOf(pack, id)]);
+  /* tower tasks: before a demon lord (or the final boss) can be fought, the Library dispatches and the Scribe's
+     royal reports for the days since the last boss must be done. Never blocks a single day, only the boss.
+     Bosses already fought, or already open when this rule arrived (S.towerFree), are never held back. */
+  function bossDays(n) {
+    const i = road.indexOf(n), keys = [];
+    for (let j = i - 1; j >= 0; j--) { const m = road[j]; if (m.t === "lord" || m.t === "final") break; if (m.t === "level") keys.push(m.key); }
+    return keys.reverse();
+  }
+  function towerTodo(n) {
+    if (!n || (n.t !== "lord" && n.t !== "final") || S().unlockAll) return [];
+    const bk = bossKey(n); if (S().bosses[bk] || (S().towerFree && S().towerFree[bk])) return [];
+    const days = new Set(bossDays(n)), out = [], P = n.pack;
+    const rd = (S().lib && S().lib.rd) || {}, rp = (S().wr && S().wr.rp) || {};
+    ((P.reading && P.reading.dispatches) || []).forEach(d => { const k = keyOf(P, d.day); if (days.has(k) && !(rd[k] && rd[k].done)) out.push({ kind: "read", key: k }); });
+    ((P.writing && P.writing.reports) || []).forEach(r => { const k = keyOf(P, r.day); if (days.has(k) && !(rp[k] && rp[k].done)) out.push({ kind: "write", key: k }); });
+    return out;
+  }
+  /* once per save: bosses that were already open when the tower rule arrived stay free, so nothing he has open locks */
+  function towerMigrate() {
+    const g = S().towerGate = S().towerGate || {}; if (g[pack0.id]) return; S().towerFree = S().towerFree || {};
+    road.forEach(n => { if ((n.t === "lord" || n.t === "final") && nodeOpen(n) && towerTodo(n).length) S().towerFree[bossKey(n)] = true; });
+    g[pack0.id] = 1;
+  }
   function currentNode() {
     const rep = Object.keys(S().repair).filter(k => S().repair[k] && road.some(n => n.key === k)).sort((a, b) => road.findIndex(n => n.key === a) - road.findIndex(n => n.key === b))[0];
     if (rep) return { ...road.find(n => n.key === rep), repair: true };
@@ -112,5 +135,5 @@ export function createProgress(getS, commit, pack0 = activePack()) {
   }
 
   return { pack: pack0, finalKey, bossKey, road, regions, topics, topic, keyOf, regionOf, chestKey, lordKey, L, stars, mastered, masteredCount, totalStars, giveStars,
-    nodeDone, nodeOpen, lordReady, currentNode, nextPhase, dayNo, record, streak, award, checkBadges, allBadges };
+    nodeDone, nodeOpen, lordReady, towerTodo, towerMigrate, bossDays, currentNode, nextPhase, dayNo, record, streak, award, checkBadges, allBadges };
 }
