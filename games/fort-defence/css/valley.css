@@ -27,3 +27,11 @@
 .btn.valleybtn{position:relative}.btn.valleybtn .dot{position:absolute;top:-4px;right:-4px;width:14px;height:14px;border-radius:50%;background:#ff5a3c;border:2px solid #fff}
 .dawn .vgrew{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;margin:0;background:#eaf7e4;border-radius:12px;padding:6px 8px 6px 12px;font:700 15px var(--f-body);color:#2a5a2f}
 .dawn .vgrew .btn{font-size:16px;padding:6px 12px;min-height:40px}
+/* valley storms (js/storms.js): the quiz sits low so the valley and its defences stay in view above it */
+.freeze.vstormbg{background:linear-gradient(to top,rgba(20,24,48,.55),rgba(20,24,48,0) 70%);backdrop-filter:none;-webkit-backdrop-filter:none;align-items:flex-end;padding-bottom:max(14px,env(safe-area-inset-bottom))}
+.vstormcard{max-height:min(68vh,100%);box-shadow:0 0 0 4px #ffd98a,0 0 40px rgba(40,40,90,.6)}
+.vstormcard h2{margin:0;font:28px var(--f-game);letter-spacing:.02em}
+.vstormcard .vx{position:absolute;right:10px;top:10px;min-height:44px;width:44px;font-size:18px;box-shadow:none;border:2px solid #e6dcc8}
+.dawn .vgrew.vstorm{background:#2b2f5e;color:#fff}
+.dawn .vgrew.vtarp{background:#e4efff;color:#1f3f72}
+.dawn .vgrew.vwarn{background:#fff4d6;color:#6a4b10;font-weight:600}

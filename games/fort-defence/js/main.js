@@ -14,6 +14,7 @@ import { createPatrol } from "./patrol.js";
 import { createReport } from "./report.js";
 import { createScribe } from "./scribe.js";
 import { createValley } from "./valley.js";
+import { createStorms } from "./storms.js";
 import { MATS, PIECES } from "./pieces.js";
 import { createBuilder } from "./builder.js";
 
@@ -38,7 +39,7 @@ stage.onFrame((dt, t) => live.forEach(o => o.userData.update && o.userData.updat
 const addLive = o => { if (o.userData.update) live.add(o); scene.add(o); return o; };
 
 let keep = null, heroObj = null, petObj = null, bannerG = null, bannerN = -1;
-let island = null, water = null, sceneryG = null, lookNow = 1, fort = null, builder = null, prog = null, day = null, night = null, library = null, scribe = null, valley = null, cards = null, patrol = null, report = null;
+let island = null, water = null, sceneryG = null, lookNow = 1, fort = null, builder = null, prog = null, day = null, night = null, library = null, scribe = null, valley = null, storms = null, cards = null, patrol = null, report = null;
 function buildWorld(region = 1) {
   const L = REGION_LOOK[region];
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -199,8 +200,9 @@ function dawnScreen() {
   const vn = valley ? valley.news() : null, vNew = vn && (vn.first || vn.n > 0);
   const grew = vn && vn.n > 0 ? h("p", { class: "vgrew" }, `🏡 Your valley grew: ${vn.n} new building${vn.n > 1 ? "s" : ""}!`, h("button", { class: "btn small", type: "button", onclick: () => { sfx("whoosh"); valley.open(); } }, "See it"))
     : vn && vn.first ? h("p", { class: "vgrew" }, "🏡 Everything you've learned has built a valley!", h("button", { class: "btn small", type: "button", onclick: () => { sfx("whoosh"); valley.open(); } }, "See it")) : null;
+  const sl = storms ? storms.dawnLine() : null, news = sl && sl.classList.contains("vstorm") ? sl : (grew || sl);   // one valley line: a storm first, then news, tarps, a warning
   const card = h("div", { class: "dawn panel fade-in" },
-    h("p", { class: "dsub" }, sub), main, skip, grew,
+    h("p", { class: "dsub" }, sub), main, skip, news,
     h("div", { class: "drow" },
       h("button", { class: "btn small blue", type: "button", onclick: () => { sfx("click"); rig.autoSpin = 0; stage.flyTo(BUILD_VIEW, 1.2); buildScreen(); } }, "🔨 Build"),
       h("button", { class: "btn small plain", type: "button", onclick: () => { sfx("click"); day.openMap(); } }, "📜 Quest map"),
@@ -332,6 +334,8 @@ function demoFort() {
   scribe = createScribe({ save, prog, day, toast, onChange: () => {} });
   day.addParentSection((dots, when, repaint) => scribe.has() ? scribe.parentSection(dots, when, repaint) : null);
   valley = createValley({ ui, h, save, prog, day, library, scribe, toast, sfx, mainStage: stage, onClose: () => { if (inGame) dawnScreen(); else titleScreen(); } });
+  storms = createStorms({ h, save, prog, cards, valley, toast, sfx }); valley.setStorms(storms);
+  day.addParentSection((dots, when, repaint) => storms.parentSection(dots, when, repaint));
   night = createNight({ stage, fx, fort, island, save, prog, cards, ui, toast, hud, onMorning: r => day.morning(r), onLeave: () => { playMusic("day"); dawnScreen(); } });
   showRegion(regionNow());
   titleScreen();
@@ -339,5 +343,5 @@ function demoFort() {
   addEventListener("pointerdown", wake);
   if (new URLSearchParams(location.search).has("valley")) { inGame = true; unlockAudio(); valley.open(); }   // the home page's Valley card
   if (DEV && save.practice) bench();   // the test bench never touches a real save
-  window.__fd = { stage, save, fx, fort, builder, prog, day, night, library, scribe, valley, cards, patrol, report, THREE, dawnScreen, startNight, startSiege, demoFort, setLook, dressHero, showRegion, visitFort };
+  window.__fd = { stage, save, fx, fort, builder, prog, day, night, library, scribe, valley, storms, cards, patrol, report, THREE, dawnScreen, startNight, startSiege, demoFort, setLook, dressHero, showRegion, visitFort };
 })();
