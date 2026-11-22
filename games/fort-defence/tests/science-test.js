@@ -85,14 +85,14 @@ const ANSWER=`(function(spec, root, wrong){
  await p.evaluate(()=>{ __fd.day.close('nav'); __fd.day.open('sci2:11'); }); await p.evaluate(()=>{}); await p.waitForTimeout(300);
  await p.evaluate(()=>{ __fd.day.close('nav'); }); 
  // ---- the Blob King ----
- await p.evaluate(()=>{ const S=__fd.save.state; for(let i=1;i<=5;i++){ S.lv['sci2:'+i]={stars:3,train:true}; S.learnDone['sci2:'+i]=true; delete S.repair['sci2:'+i]; } S.chests['sci2:1']=true; __fd.save.commit(); __fd.demoFort(); __fd.dawnScreen(); });
+ await p.evaluate(()=>{ const S=__fd.save.state; S.lib=S.lib||{fl:{},rd:{}}; S.lib.rd=S.lib.rd||{}; S.wr=S.wr||{fl:{},rp:{},desk:[]}; S.wr.rp=S.wr.rp||{}; for(let i=1;i<=5;i++){ S.lib.rd['sci2:'+i]={done:true}; S.wr.rp['sci2:'+i]={done:true}; S.lv['sci2:'+i]={stars:3,train:true}; S.learnDone['sci2:'+i]=true; delete S.repair['sci2:'+i]; } S.chests['sci2:1']=true; __fd.save.commit(); __fd.demoFort(); __fd.dawnScreen(); });
  await p.waitForSelector('.dawn .go-day'); log('9 dawn:', await p.locator('.go-day').textContent());
  await p.click('.go-day'); log('10 Blob King:', await battle([]), '| won', await p.evaluate(()=>JSON.stringify(__fd.save.state.bosses['sci2:1'])), '| badge', await p.evaluate(()=>!!__fd.save.state.badges['sci2:w1']));
  log('   morning says:', (await p.locator('.sheet .celebrate p').allTextContents()).join(' / ').slice(0,200));
  await p.locator('.sheet .bigbtn',{hasText:'Carry on'}).click(); await p.waitForSelector('.dawn .go-day'); await p.waitForTimeout(1000);
  log('11 next land:', await p.evaluate(()=>__fd.prog.currentNode().region.name), '| fort look', await p.evaluate(()=>__fd.fort.region), '|', await p.locator('.go-day').textContent()); await shot('bodybuilders');
  // ---- the Great Germ (practice test, 13 of 16) ----
- await p.evaluate(()=>{ const S=__fd.save.state; for(let i=1;i<=13;i++){ S.lv['sci2:'+i]={stars:3,train:true}; S.learnDone['sci2:'+i]=true; delete S.repair['sci2:'+i]; } ['sci2:1','sci2:2','sci2:3'].forEach(k=>S.bosses[k]={won:true,best:9}); __fd.save.commit(); __fd.dawnScreen(); });
+ await p.evaluate(()=>{ const S=__fd.save.state; S.lib=S.lib||{fl:{},rd:{}}; S.lib.rd=S.lib.rd||{}; S.wr=S.wr||{fl:{},rp:{},desk:[]}; S.wr.rp=S.wr.rp||{}; for(let i=1;i<=13;i++){ S.lib.rd['sci2:'+i]={done:true}; S.wr.rp['sci2:'+i]={done:true}; S.lv['sci2:'+i]={stars:3,train:true}; S.learnDone['sci2:'+i]=true; delete S.repair['sci2:'+i]; } ['sci2:1','sci2:2','sci2:3'].forEach(k=>S.bosses[k]={won:true,best:9}); __fd.save.commit(); __fd.dawnScreen(); });
  await p.waitForSelector('.dawn .go-day'); await p.waitForTimeout(1000); log('12 dawn:', await p.locator('.go-day').textContent()); await shot('citadel');
  await p.click('.go-day'); log('13 Great Germ:', await battle([2,9]), '|', await p.evaluate(()=>JSON.stringify(__fd.save.state.bosses['sci2:final'])), '| badge', await p.evaluate(()=>!!__fd.save.state.badges['sci2:final']), '| exams', await p.evaluate(()=>JSON.stringify(__fd.save.state.exams.map(e=>e.pack+' '+e.score+'/'+e.total))));
  log('   morning:', (await p.locator('.sheet .celebrate p').allTextContents()).join(' / ').slice(0,160));

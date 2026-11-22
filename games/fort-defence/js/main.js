@@ -166,9 +166,15 @@ function dawnScreen() {
   if (builder) builder.unmount();
   if (day && day.isOpen) day.close("nav");
   stage.setShift(0, 0); rig.autoSpin = 0.03; stage.flyTo(DAWN_VIEW, 1.4);
-  const cur = prog.currentNode();
+  prog.towerMigrate();
+  const cur = prog.currentNode(), todo = prog.towerTodo(cur);
   let main, sub = "";
-  if (cur.t === "level" && !cur.repair && prog.nextPhase(cur.key) === "brain") {
+  if (todo.length) {   // the demon lord waits until this land's reading and royal reports are done
+    const lord = cur.t === "final" ? cur.region.final : cur.region.lord, nr = todo.filter(t => t.kind === "read").length, nw = todo.length - nr;
+    const go = nr ? () => library.open() : () => scribe.open();
+    main = h("button", { class: "btn pulse go-day", type: "button", onclick: () => { sfx("whoosh"); go(); } }, nr ? `📚 Read for the battle (${todo.length} to go)` : `✍️ Write for the battle (${todo.length} to go)`);
+    sub = `${lord.name[0].toUpperCase() + lord.name.slice(1)} is coming! First get ready: ${[nr ? `read ${nr} dispatch${nr > 1 ? "es" : ""} in the 📚 Library` : "", nw ? `send ${nw} report${nw > 1 ? "s" : ""} to the King in the ✍️ Scribe's Tower` : ""].filter(Boolean).join(" and ")}.`;
+  } else if (cur.t === "level" && !cur.repair && prog.nextPhase(cur.key) === "brain") {
     const tp = prog.topic(cur.key);
     main = h("button", { class: "btn pulse go-day night", type: "button", onclick: () => startNight(cur.key) }, `🌙 Night of Day ${prog.dayNo(cur.key)}: ${tp.t.short}`);
     sub = "⭐⭐ so far. Build your defences, then face the night. The Brain check is in the runes.";
@@ -213,6 +219,7 @@ function visitFort(r) { visiting = r === regionNow() ? null : r; if (day && day.
 
 /* a demon lord attacks */
 function startSiege(node) {
+  if (prog.towerTodo(node).length) { toast("Finish the reading and reports for this land first."); dawnScreen(); return; }
   if (builder) builder.unmount(); if (day && day.isOpen) day.close("nav");
   visiting = null; showRegion(regionNow());
   night.startSiege(node);
@@ -300,6 +307,7 @@ function demoFort() {
   fort = createFort({ scene, state: S, region: 1, island, onFrameObjects: live });
   builder = createBuilder({ stage, fort, fx, save, toast });
   prog = createProgress(S, () => save.commit());
+  prog.towerMigrate();
   document.title = "Fort Defence · " + prog.pack.subject;
   day = createDay({ save, prog, stage, toast, onLand: landCheck,
     onBuild: () => { rig.autoSpin = 0; stage.flyTo(BUILD_VIEW, 1.2); buildScreen(); },
