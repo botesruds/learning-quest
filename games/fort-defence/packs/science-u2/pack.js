@@ -3,6 +3,7 @@
 import { STEPS, PREVIEWS, FINAL_TOPICS, BADGES } from "./topics.js";
 import { UNDERSTANDING } from "./understanding.js";
 import { DISPATCHES } from "./reading.js";
+import { REPORTS } from "./writing.js";
 
 export default {
   id: "science-u2",
@@ -18,6 +19,7 @@ export default {
   // pairs of days that are easy to mix up: a patrol rune on the first day prefers one of these (interleaving)
   confusable: { 3: [2], 5: [2], 6: [2], 8: [7], 9: [7], 10: [7], 11: [10], 12: [10, 7] },
   reading: { dispatches: DISPATCHES },   // the Library tower's readings, one per day (js/library.js)
+  writing: { reports: REPORTS },         // the Scribe's Tower royal reports, one per day (js/scribe.js)
   regions: [
     { n: 1, name: "Cell City", emoji: "🦠", look: 6, blurb: "Every living thing is built from cells, and every part has a job.", topics: [1, 2, 3, 4, 5],
       lord: { name: "the Blob King", badge: "sci2:w1", questions: 8, checks: 2, need: 8 } },

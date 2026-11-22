@@ -408,6 +408,7 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
             return h("div", { class: "pc-row" }, h("b", { class: "pc-day" }, st.icon), h("div", { class: "pc-t" }, h("b", {}, `Floor ${st.n}: ${st.name}`), h("div", { class: "small muted" }, st.does)),
               h("span", { class: "pc-st", "aria-label": n + " stars" }, "⭐".repeat(n) + "☆".repeat(3 - n)), dots("lib:" + st.k)); })));
       }
+      extraParent.forEach(fn => { const el = fn(dots, when, paint); if (el) parts.push(el); });   // the Scribe's Tower writing desk
       const ex = (S().exams || []).filter(e => (e.pack || "algebra-u3") === prog.pack.id);
       if (ex.length) parts.push(h("div", { class: "card small" }, h("b", {}, `Practice exam (${prog.pack.regions.find(r => r.final) ? cap(prog.pack.regions.find(r => r.final).final.name) : "final boss"}) attempts`), h("p", {}, ex.slice(-6).map(e => `${when(e.t)}: ${e.score}/${e.total}`).join(" · "))));
       let armed = false;
@@ -422,7 +423,8 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
   }
 
   /* the sheet's helpers, for other screens that live on the same sheet (the Library tower) */
+  const extraParent = [];
   const kit = () => { if (!sheet) mountSheet(); ctx = { key: null, loot: {} }; paintLoot(); return { head, set, closeBtn, mission, celebrate, bigbtn, linkbtn, grant, lootbar }; };
 
-  return { kit, open: open_, openChest, openMap, openShop, openParentGate, openParent, openRepair, morning, close, grant, get isOpen() { return !!sheet; }, paintLoot };
+  return { kit, addParentSection: fn => extraParent.push(fn), open: open_, openChest, openMap, openShop, openParentGate, openParent, openRepair, morning, close, grant, get isOpen() { return !!sheet; }, paintLoot };
 }
