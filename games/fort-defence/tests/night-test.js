@@ -17,6 +17,7 @@ async function run(b, ctxOpts, tag, full){
  log(tag,'   pieces in fort:', await p.evaluate(()=>__fd.fort.cells.size), demo);
  await p.evaluate(()=>{ __fd.night.timeScale=8; }); await p.click('.go-day'); await wf(()=>__fd.night.running); log(tag,'2 night running:', await p.evaluate(()=>__fd.night.running));
  const answer=async(wrong)=>{ const Q=await p.evaluate(()=>window.__fdq);
+   if(Q.type==='pick'){ await p.evaluate(k=>document.querySelector('.runecard .ideas button[data-k="'+k+'"]').click(),Q.obj.ans); await p.waitForTimeout(150); await p.evaluate(()=>[...document.querySelectorAll('.runecard button.btn.primary:not(.hide)')].pop().click()); await p.waitForFunction(()=>window.__fdq&&window.__fdq.type!=='pick',null,{timeout:10000}); return 'p'+await answer(wrong); }
    if(Q.type==='brain'){ const i= wrong? (Q.obj.a+1)%Q.obj.c.length : Q.obj.a; await p.locator('.runecard .opts button').nth(i).click(); await p.waitForTimeout(150); await p.locator('.runecard button.btn.primary:not(.hide)').last().click(); return 'brain'+(wrong?'✗':'✓'); }
    const spec=Q.obj.final.a; const v= wrong?'999': 'num' in spec? String(spec.num) : 'expr' in spec? spec.expr : 'words' in spec? spec.words[0]: null;
    if(spec.choice){ await p.locator('.runecard .opts button').filter({hasText:spec.choice[spec.ans]}).first().click(); }

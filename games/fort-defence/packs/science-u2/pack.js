@@ -15,6 +15,8 @@ export default {
   previews: PREVIEWS,
   understanding: UNDERSTANDING,
   badges: BADGES,
+  // pairs of days that are easy to mix up: a patrol rune on the first day prefers one of these (interleaving)
+  confusable: { 3: [2], 5: [2], 6: [2], 8: [7], 9: [7], 10: [7], 11: [10], 12: [10, 7] },
   reading: { dispatches: DISPATCHES },   // the Library tower's readings, one per day (js/library.js)
   regions: [
     { n: 1, name: "Cell City", emoji: "🦠", look: 6, blurb: "Every living thing is built from cells, and every part has a job.", topics: [1, 2, 3, 4, 5],

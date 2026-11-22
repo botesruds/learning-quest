@@ -33,6 +33,7 @@ const ANSWER=`(function(spec, root, wrong){
  const doRiddle=async()=>{ const u=(await q()).obj; await p.evaluate(u=>{ const card=document.querySelector('.sheet .uq'); const clickOpt=t=>[...card.querySelectorAll('.opts button')].find(b=>b.innerHTML===t).click();
    if(u.k==='why'||u.k==='method') clickOpt(u.c[u.a]); else if(u.k==='mistake'){ card.querySelectorAll('.wline')[u.bad].click(); clickOpt(u.fixes[u.fix]); } },u); await p.waitForTimeout(200); await nextQ(); return u.k; };
  const runeAnswer=async(wrong)=>{ const Q=await q();
+   if(Q.type==='pick'){ await p.evaluate(k=>document.querySelector('.runecard .ideas button[data-k="'+k+'"]').click(),Q.obj.ans); await p.waitForTimeout(150); await p.evaluate(()=>[...document.querySelectorAll('.runecard button.btn.primary:not(.hide)')].pop().click()); await p.waitForFunction(()=>window.__fdq&&window.__fdq.type!=='pick',null,{timeout:10000}); return 'p'+await runeAnswer(wrong); }
    if(Q.type==='brain'){ const i=wrong?(Q.obj.a+1)%Q.obj.c.length:Q.obj.a; await p.locator('.runecard .opts button').nth(i).click(); }
    else { const r=await ans(Q.obj.final.a,'.runecard .card',wrong); if(Q.type==='own'&&!(await p.locator('.runecard button.btn.primary:not(.hide)').count())){ await p.waitForTimeout(200); } }
    await p.waitForTimeout(250); await p.locator('.runecard button.btn.primary:not(.hide)').last().click(); return Q.type[0]+(wrong?'✗':'✓'); };

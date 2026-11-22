@@ -29,6 +29,8 @@ export default {
   previews: { 1: { title, cards } },     // optional scout reports (sneak peeks), by region number
   understanding: { 1: [...], 2: [...] }, // optional understanding questions, by topic id
   badges: [{ k: "l3", e: "🔬", n: "Microscope Master", d: "Master day 3" }],  // "l<id>" badges are awarded automatically
+  confusable: { 10: [7] },       // optional: days that are easy to mix up; a patrol rune on day 10 prefers day 7
+  reading: { dispatches: [...] },        // optional: the Library tower's readings, one per day (see below)
   regions: [
     { n: 1, name: "Cell City", emoji: "🧫", look: 1, blurb: "Everything alive is made of cells.", topics: [1, 2, 3, 4],
       lord: { name: "the Membrane Monster", badge: "w1", questions: 8, checks: 2, need: 8 } },
@@ -85,6 +87,24 @@ Choices are shuffled when shown, so put the right one first if you like. Wrong a
 - Loot for answers (wood, stone, iron, crystal for understanding, a tower plan for 3 in a row), land that grows with mastery,
   scout reports, the quest map, badges, saving to the family cloud, and (from Stage 4/5) the night battle, weak spots,
   demon lords and repairs.
+
+## Interleaving (mixed practice)
+
+An idea is only mixed in after it is mastered on its own. Each night 2 of the 6 runes are **patrol runes**: quick questions
+from earlier mastered days (a `confusable` day first), placed at random among today's 4 Brain check runes. They never count
+towards the third star. Demon lords shuffle their questions fully (never the same day twice in a row) and take 2 of them from
+earlier lands he has beaten. Before a patrol or lord question he first picks **which day's idea it needs**; a right pick
+earns a crystal, a wrong one shows the day's name, and then he answers. The final boss (practice exam) has no pick step.
+
+## The Library tower (reading strategies)
+
+A pack with `reading.dispatches` gets the Library tower (📚 on the dawn screen, `js/library.js`). Six floors teach one
+reading strategy each (`packs/reading/strategies.js`: predict, clarify, question, find the evidence, summarise, infer);
+dispatches are short readings about each day, opened when that day's lesson is done. It is its own track and never changes a
+day's stars. A dispatch is `{ day, title, pic, text: [sentences], words: { word: meaning }, qs: [...] }`; each question has
+`s` (the strategy key), `ask`, `why`, and either `choice` (right answer first; shuffled in the game) with an optional `clue`
+(the sentence to highlight after a miss), `ans` + `key` for tap-the-proof-sentence (`s: "evidence"`), or `order`.
+`node tests/content-check.js` checks every index.
 
 ## Subjects
 

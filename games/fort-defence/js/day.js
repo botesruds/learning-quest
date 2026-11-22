@@ -7,6 +7,7 @@ import { sfx } from "./audio.js";
 import { MATS, PIECES } from "./pieces.js";
 import { HEROES, PETS, makeHero, makePet } from "./models.js";
 import { objThumb } from "./thumbs.js";
+import { STRATEGIES } from "../packs/reading/strategies.js";
 
 /* what each kind of answer earns (see the design document) */
 export const LOOT = {
@@ -398,6 +399,15 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
           h("label", { class: "pc-check" }, cb, "Open this land now (class is doing it)")), ...rows,
           lord ? h("p", { class: "small" }, `${r.final ? "🐉" : "👹"} ${cap(lord.name)}: ${bs ? (bs.won ? "beaten" : "not beaten yet") + `, best ${bs.best} hits` : "not faced yet"}`) : null));
       });
+      if (prog.pack.reading) {   // the Library tower: reading strategies, its own track
+        const L = S().lib || {}, fl = L.fl || {}, rd = L.rd || {}, ds = prog.pack.reading.dispatches;
+        const nRead = ds.filter(d => rd[prog.keyOf(prog.pack, d.day)] && rd[prog.keyOf(prog.pack, d.day)].done).length;
+        parts.push(h("section", { class: "stack pc-region" }, h("h3", {}, "📚 Library tower (reading)"),
+          h("p", { class: "small muted" }, `Its own track: it never blocks a science day. Each floor teaches one reading strategy (lesson ⭐, 3 right on his own ⭐⭐, a mixed check where he names the strategy ⭐⭐⭐). Dispatches read: ${nRead} of ${ds.length}.`),
+          ...STRATEGIES.map(st => { const f = fl[st.k] || {}, n = f.stars || 0;
+            return h("div", { class: "pc-row" }, h("b", { class: "pc-day" }, st.icon), h("div", { class: "pc-t" }, h("b", {}, `Floor ${st.n}: ${st.name}`), h("div", { class: "small muted" }, st.does)),
+              h("span", { class: "pc-st", "aria-label": n + " stars" }, "⭐".repeat(n) + "☆".repeat(3 - n)), dots("lib:" + st.k)); })));
+      }
       const ex = (S().exams || []).filter(e => (e.pack || "algebra-u3") === prog.pack.id);
       if (ex.length) parts.push(h("div", { class: "card small" }, h("b", {}, `Practice exam (${prog.pack.regions.find(r => r.final) ? cap(prog.pack.regions.find(r => r.final).final.name) : "final boss"}) attempts`), h("p", {}, ex.slice(-6).map(e => `${when(e.t)}: ${e.score}/${e.total}`).join(" · "))));
       let armed = false;
