@@ -344,3 +344,47 @@ body.sheet-open #ui{display:none}
 .confnote.good{background:color-mix(in srgb,var(--good) 10%,var(--surface))}
 .confnote.bad{background:color-mix(in srgb,var(--bad) 8%,var(--surface))}
 .confnote.mid{background:color-mix(in srgb,var(--warn) 10%,var(--surface))}
+/* ---------- thinking tasks (js/think.js, GapAnswer in js/qui.js) ---------- */
+.sheet .gapline{font-size:1.15rem;line-height:2.4;font-weight:600}
+.sheet .gapslot{display:inline-block;min-width:5.5em;margin:0 4px;padding:2px 10px;border:2px dashed #9fb3d1;border-radius:10px;background:#f6f9ff;font:inherit;color:#1f3a5f;cursor:pointer;line-height:1.6}
+.sheet .gapslot.full{border-style:solid;background:#e8f0ff}
+.sheet .gapslot.cur{box-shadow:0 0 0 3px #ffd54f;border-color:#f2b705}
+.sheet .gapslot.no,.sheet .gapin.no{border-color:#d32f2f;background:#ffebee}
+.sheet .gapslot.ok,.sheet .gapin.ok{border-color:#2e7d32;background:#e8f5e9}
+.sheet .gapin{font:inherit;margin:0 4px;padding:2px 8px;border:2px solid #9fb3d1;border-radius:10px;max-width:11em}
+.sheet .gapbank{display:flex;flex-wrap:wrap;gap:8px}
+.sheet .gapw{font:inherit;font-weight:700;padding:8px 14px;border-radius:12px;border:2px solid #c8d8f5;background:#fff;cursor:pointer;min-height:44px}
+.sheet .gapw:disabled{opacity:.35;cursor:default}
+.sheet .exstart{font-weight:700;color:#1f3a5f}
+.sheet .exin{width:100%;box-sizing:border-box;font:inherit;font-size:1.05rem;padding:10px;border:2px solid #c8d8f5;border-radius:12px;resize:vertical}
+.sheet .passage.spw .sent{display:inline;padding:2px 0}
+.sheet .passage.spw .spws.tapable{cursor:pointer;background:#eef4ff;box-shadow:0 0 0 1px #c8d8f5}
+.sheet .passage.spw .spws.picked{background:#fff3c4;box-shadow:0 0 0 2px #f2cf3c}
+.sheet .passage.spw .wd.tapable{cursor:pointer;border-radius:4px}
+.sheet .passage.spw .wd.tapable:hover{background:#d9e7ff}
+.sheet .passage.spw .wd.pstart{background:#ffe082}
+.sheet .passage.spw .wd.inp{background:#ffcc80;font-weight:700}
+.sheet .passage.spw .wd.isw{background:#ef6c00;color:#fff;font-weight:800;padding:0 3px}
+.sheet .spwq{font-style:italic}
+.sheet .spwcmp td,.sheet .spwcmp th{vertical-align:top;text-align:left}
+.sheet .spwdemo mark{background:#fff3c4;padding:1px 2px}
+/* Map Room */
+.sheet .mm{display:flex;flex-direction:column;gap:10px}
+.sheet .mm.wide{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:start}
+.sheet .mmc{background:#1f3a5f;color:#fff;font-weight:800;text-align:center;padding:16px 12px;border-radius:16px;align-self:center}
+.sheet .mmb{border:3px solid var(--c);border-radius:14px;background:#fff;padding:8px 10px;min-height:70px;cursor:pointer}
+.sheet .mmb.empty{border-style:dashed;background:#fafafa}
+.sheet .mmh{font-weight:800;color:#222;border-bottom:3px solid var(--c);padding-bottom:4px;margin-bottom:4px}
+.sheet .mmb.empty .mmh{color:#888;border-bottom-color:transparent}
+.sheet .mmb ul{margin:4px 0 0;padding-left:18px;font-size:.92rem}
+.sheet .mmb li::marker{color:var(--c)}
+.sheet .mmtrayw{position:sticky;bottom:0;background:#fffdf6;padding:8px 0;border-top:2px solid #eee}
+.sheet .mmtray{display:flex;flex-wrap:wrap;gap:8px;min-height:48px}
+.sheet .mmcard{font:inherit;font-weight:700;padding:10px 12px;border-radius:12px;border:2px solid #b0bec5;background:#fff;cursor:grab;touch-action:none;min-height:44px;text-align:left}
+.sheet .mmcard.prim{border-color:#1f3a5f;background:#e8eef7}
+.sheet .mmcard.sel{box-shadow:0 0 0 3px #ffd54f;border-color:#f2b705}
+.mmghost{position:fixed;z-index:9999;pointer-events:none;background:#fff;border:2px solid #f2b705;border-radius:12px;padding:8px 12px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.sheet .mmlink{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0}
+.sheet .mmlink.ok{color:#2e7d32;font-weight:700;font-style:italic}
+.sheet .mmlv{text-align:left}
+.sheet .mmgap{min-height:1px}

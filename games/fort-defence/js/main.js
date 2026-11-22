@@ -13,6 +13,7 @@ import { createCards } from "./cards.js";
 import { createPatrol } from "./patrol.js";
 import { createReport } from "./report.js";
 import { createScribe } from "./scribe.js";
+import { createMapRoom } from "./think.js";
 import { createValley } from "./valley.js";
 import { createStorms } from "./storms.js";
 import { MATS, PIECES } from "./pieces.js";
@@ -39,7 +40,7 @@ stage.onFrame((dt, t) => live.forEach(o => o.userData.update && o.userData.updat
 const addLive = o => { if (o.userData.update) live.add(o); scene.add(o); return o; };
 
 let keep = null, heroObj = null, petObj = null, bannerG = null, bannerN = -1;
-let island = null, water = null, sceneryG = null, lookNow = 1, fort = null, builder = null, prog = null, day = null, night = null, library = null, scribe = null, valley = null, storms = null, cards = null, patrol = null, report = null;
+let island = null, water = null, sceneryG = null, lookNow = 1, fort = null, builder = null, prog = null, day = null, night = null, library = null, scribe = null, valley = null, storms = null, cards = null, patrol = null, report = null, maproom = null;
 function buildWorld(region = 1) {
   const L = REGION_LOOK[region];
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -217,6 +218,7 @@ function dawnScreen() {
       h("button", { class: "btn small plain", type: "button", onclick: () => { sfx("click"); day.openShop(); } }, "🛡️ Hero shop"),
       library && library.has() ? h("button", { class: "btn small plain libbtn" + (library.news() ? " new" : ""), type: "button", onclick: () => { sfx("click"); library.open(); } }, "📚 Library", library.news() ? h("i", { class: "dot", "aria-label": "something new" }) : null) : null,
       scribe && scribe.has() ? h("button", { class: "btn small plain scribebtn" + (scribe.news() ? " new" : ""), type: "button", onclick: () => { sfx("click"); scribe.open(); } }, "✍️ Scribe", scribe.news() ? h("i", { class: "dot", "aria-label": "something new" }) : null) : null,
+      maproom && maproom.has() ? h("button", { class: "btn small plain mapbtn" + (maproom.news() ? " new" : ""), type: "button", onclick: () => { sfx("click"); maproom.open(); } }, "🗺️ Map Room", maproom.news() ? h("i", { class: "dot", "aria-label": "something new" }) : null) : null,
       chest ? h("button", { class: "btn small gold", type: "button", onclick: () => { sfx("click"); day.openChest(chest.pack, chest.region); } }, "🎁 New scout report") : null,
       crack ? h("button", { class: "btn small crackbtn", type: "button", onclick: () => { sfx("click"); day.openRepair(crack); } }, `🔧 Fix a crack (${cracks.length})`) : null));
   ui.replaceChildren(hud([back]), matsChips(), h("div", { class: "grow" }), card);
@@ -341,6 +343,8 @@ function demoFort() {
   day.setReport && day.setReport(report);
   scribe = createScribe({ save, prog, day, toast, onChange: () => {} });
   day.addParentSection((dots, when, repaint) => scribe.has() ? scribe.parentSection(dots, when, repaint) : null);
+  maproom = createMapRoom({ save, prog, day, toast, onChange: () => {} });
+  day.addParentSection((dots, when) => maproom.parentSection(dots, when));
   valley = createValley({ ui, h, save, prog, day, library, scribe, toast, sfx, mainStage: stage, onClose: () => { if (inGame) dawnScreen(); else titleScreen(); } });
   storms = createStorms({ h, save, prog, cards, valley, toast, sfx }); valley.setStorms(storms);
   day.addParentSection((dots, when, repaint) => storms.parentSection(dots, when, repaint));
@@ -351,5 +355,5 @@ function demoFort() {
   addEventListener("pointerdown", wake);
   if (new URLSearchParams(location.search).has("valley")) { inGame = true; unlockAudio(); valley.open(); }   // the home page's Valley card
   if (DEV && save.practice) bench();   // the test bench never touches a real save
-  window.__fd = { stage, save, fx, fort, builder, prog, day, night, library, scribe, valley, storms, cards, patrol, report, THREE, dawnScreen, startNight, startSiege, demoFort, setLook, dressHero, showRegion, visitFort };
+  window.__fd = { stage, save, fx, fort, builder, prog, day, night, library, scribe, valley, storms, cards, patrol, report, maproom, THREE, dawnScreen, startNight, startSiege, demoFort, setLook, dressHero, showRegion, visitFort };
 })();

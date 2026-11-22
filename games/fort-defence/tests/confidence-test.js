@@ -46,6 +46,8 @@ const ANSWER=`(function(spec, root, wrong){
  const answerRune0=async(wrong,conf,auto)=>{ let Q=await p.evaluate(()=>window.__fdq); let out='';
    if(Q.type==='pick'){ await p.evaluate(k=>document.querySelector('.runecard .ideas button[data-k="'+k+'"]')?.click(),Q.obj.ans); await p.waitForTimeout(150);
      await p.evaluate(()=>[...document.querySelectorAll('.runecard button.btn.primary:not(.hide)')].pop()?.click()); await p.waitForTimeout(300); Q=await p.evaluate(()=>window.__fdq); out='pick+'; }
+   if(Q.type==='explain'){ await p.fill('.runecard textarea.exin', Q.obj.model.slice(Q.obj.starter.length)); await p.locator('.runecard button.btn.primary',{hasText:'Check'}).click(); await p.waitForTimeout(400);
+     const noRow=await p.locator('.runecard .conf').count(); await p.evaluate(()=>[...document.querySelectorAll('.runecard button.btn.primary:not(.hide)')].pop()?.click()); return { label:'explain(typed, no confidence row: '+(noRow===0)+')', dim:true, dimAfter:false, note:'', cmd:false, typed:true }; }
    if(auto){ const k=Q.type==='brain'?'b':'o'; const L=auto[k]; [conf,wrong]=L[auto[k+'i']++%L.length]; }
    const dim=await p.evaluate(()=>!!document.querySelector('.runecard .conf-wait'));
    if(conf){ await p.locator(`.runecard .conf-b[data-conf="${conf}"]`).click(); }
@@ -61,15 +63,15 @@ const ANSWER=`(function(spec, root, wrong){
  await p.evaluate(()=>{ __fd.night.timeScale=14; __fd.startNight('sci2:10'); }); await p.waitForFunction(()=>__fd.night.running,null,{timeout:60000});
  const auto={b:[['sure',true],['guess',false],['think',false],['guess',true]],o:[['sure',false],[null,false],['think',false]],bi:0,oi:0};
  const n=await p.evaluate(()=>__fd.night.state.runes.length); const seen=[];
- for(let r=0;r<n;r++){ await p.waitForFunction(()=>document.querySelector('.runebtn.ready'),null,{timeout:150000,polling:300});
+ for(let r=0;r<n;r++){ await p.waitForFunction(()=>document.querySelector('.runebtn.ready'),null,{timeout:150000,polling:300}).catch(async e=>{ log('   STUCK', JSON.stringify(await p.evaluate(()=>{ const N=__fd.night.state; return { card:!!document.querySelector('.runecard'), btns:[...document.querySelectorAll('.runecard button')].map(b=>b.textContent+(b.classList.contains('hide')?'(hidden)':'')), seg:N&&N.seg, frozen:N&&N.frozen, ready:N&&N.runeReady, done:N&&N.runeDone, demons:N&&N.demons.length, time:N&&N.time, running:__fd.night.running }; }))); await p.screenshot({path:'conf-stuck.png'}); throw e; });
    await p.evaluate(()=>document.querySelector('.runebtn.ready').click()); await p.waitForSelector('.runecard');
    const a=await answerRune(false,null,auto); seen.push(a); log('    rune', r+1, a.label);
    if(r===0) await p.screenshot({path:'conf-rune.png'}).catch(()=>{});
    await p.waitForFunction(()=>!document.querySelector('.runecard'),null,{timeout:10000}).catch(()=>{}); }
  seen.forEach(a=>log('   ', a.label, '| dimmed before tap:', a.dim, '| after:', a.dimAfter, '|', a.note||'(no note)'));
- check(seen.every(a=>a.dim&&(a.label.includes('/')?!a.dimAfter:true)),'answers dim until the tap');
+ check(seen.filter(a=>!a.typed).every(a=>a.dim&&(a.label.includes('/')?!a.dimAfter:true)),'answers dim until the tap');
  check(seen.filter(a=>a.label.includes('✗/sure')).every(a=>/surprise/i.test(a.note)),'sure + wrong says surprise');
- check(seen.filter(a=>!a.label.includes('/')).every(a=>!a.note),'no tap, no note');
+ check(seen.filter(a=>!a.typed&&!a.label.includes('/')).every(a=>!a.note),'no tap, no note');
  const saved=await p.evaluate(()=>{ const S=__fd.save.state; const h=Object.values(S.hist).flat().filter(x=>x.conf); const cl=Object.values(S.cards||{}).flatMap(c=>(c.log||[]).filter(l=>l.conf)); return { hist:h.length, kinds:[...new Set(h.map(x=>x.conf))], cardLogs:cl.map(l=>l.r+'/'+l.conf+(l.surprise?'/surprise':'')) }; });
  log('   saved with answers:', saved.hist, 'hist entries with a tap', JSON.stringify(saved.kinds), '| card logs:', saved.cardLogs.join(' ')||'(none)');
  check(saved.hist>=4,'confidence saved in hist');
@@ -80,7 +82,7 @@ const ANSWER=`(function(spec, root, wrong){
  await p.evaluate(()=>{ __fd.night.timeScale=14; __fd.startSiege(__fd.prog.road.find(n=>n.t==='lord'&&n.region.n===3)); }).catch(e=>log('   startSiege', e.message));
  await p.waitForFunction(()=>__fd.night.running,null,{timeout:60000});
  const m=await p.evaluate(()=>__fd.night.state.runes.length); const siegeSeen=[]; let cmdWrongBefore=null, cmdWrongAfter=null;
- for(let r=0;r<m;r++){ if(!await p.waitForFunction(()=>document.querySelector('.runebtn.ready'),null,{timeout:150000,polling:300}).then(()=>true).catch(()=>false)) { siegeSeen.push('stuck'); break; }
+ for(let r=0;r<m;r++){ if(!await p.waitForFunction(()=>document.querySelector('.runebtn.ready'),null,{timeout:150000,polling:300}).then(()=>true).catch(()=>false)) { siegeSeen.push('stuck'); log('   SIEGE STUCK', JSON.stringify(await p.evaluate(()=>{ const N=__fd.night.state; return { card:!!document.querySelector('.runecard'), btns:[...document.querySelectorAll('.runecard button')].map(b=>b.textContent+(b.classList.contains('hide')?'(hidden)':'')), seg:N&&N.seg, n:N&&N.runes.length, frozen:N&&N.frozen, ready:N&&N.runeReady, done:N&&N.runeDone, runeAt:N&&N.runeAt, nextSeg:N&&N.nextSeg, spawnQ:N&&N.spawnQ.length, demons:N&&N.demons.map(d=>[d.hp|0,d.fly?1:0,d.obj.position.x.toFixed(1),d.obj.position.z.toFixed(1)]), after:N&&N.after, hits:N&&N.hits, running:__fd.night.running }; }))); await p.screenshot({path:'conf-siege-stuck.png'}); break; }
    await p.evaluate(()=>document.querySelector('.runebtn.ready').click()); await p.waitForSelector('.runecard');
    const isCmd=await p.evaluate(()=>!!(window.__fdq&&window.__fdq.obj&&window.__fdq.obj.cmd));
    if(isCmd){ cmdWrongBefore=await p.evaluate(()=>__fd.night.state.wrong.size); await p.screenshot({path:'conf-command.png'}).catch(()=>{}); }
@@ -90,7 +92,7 @@ const ANSWER=`(function(spec, root, wrong){
  await p.waitForFunction(()=>document.querySelector('.sheet .celebrate h1'),null,{timeout:120000,polling:500}).catch(()=>{});
  const res=await p.evaluate(()=>({ h1:(document.querySelector('.sheet .celebrate h1')||{}).textContent, repair:Object.keys(__fd.save.state.repair).filter(k=>__fd.save.state.repair[k]) }));
  log('3 siege:', siegeSeen.join(' '), '|', res.h1, '| wrong set before/after command rune:', cmdWrongBefore, cmdWrongAfter, '| repairs:', JSON.stringify(res.repair));
- check(cmdWrongBefore!=null&&cmdWrongBefore===cmdWrongAfter&&res.repair.length===0,'command rune never marks a repair');
+ check(!siegeSeen.includes('stuck')&&cmdWrongBefore!=null&&cmdWrongBefore===cmdWrongAfter&&res.repair.length===0,'command rune never marks a repair');
 
  // 4. the daily patrol
  await p.reload(); await p.waitForSelector('.logo',{timeout:30000}); await p.click('.btn.pulse'); await p.waitForSelector('.dawn .go-day');

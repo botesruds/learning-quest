@@ -65,6 +65,13 @@ Answers can be `{ num: 7 }`, `{ expr: "2n+3", simp: true }`, `{ choice: [...], a
 - `{ tap: { pic: () => svg, ans: "nucleus", name: "nucleus" } }`: tap the right part of a picture. The svg marks each part with `data-part="..."`.
 - `{ sort: { bins: ["Plant only", "Both"], items: [["Nucleus", 1], ["Cell wall", 0]] } }`: put each card in its group, then Check.
 - `{ order: ["first", "second", "third"] }`: tap the cards in the right order, then Check (they are shown shuffled).
+- `{ gap: { text: "The ___ of a thing fits the ___ it does.", ans: ["shape", "job"], bank: ["shape", "job", "colour", "size"], key } }`: fill the gaps from a word bank. With `key` (the topic's save key) the gaps are typed once that day has 3 stars. A lesson "try" card can use `q: { ask, gap, why }`.
+
+### Thinking tasks (optional): `think: { gaps, spw, explain, maps }`
+
+See `packs/science-u2/think.js` for the format and `js/think.js` for the screens: a fill-the-gap card and question maker per day,
+Sentence, Phrase, Word on the day's Library dispatch after the lesson, one "Explain it" Brain check rune per day (key ideas checked
+for free, the writing coach only as a fallback), and the Map Room mind-maps (one per land).
 
 A question with no `steps` still gets a 💡 hint in Train if its `final` has a `hint`.
 The parser accepts numbers, letters, + − × ÷, brackets and ², so `2(n + 3)` and `2n + 6` both match `{ expr: "2n+6" }`.

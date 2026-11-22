@@ -11,6 +11,10 @@ const ANSWER=`(function(spec, root, wrong){
   const fill=(inp,v)=>{ inp.value=v; inp.dispatchEvent(new Event('input')); inp.parentElement.querySelector('button').click(); };
   const tidy=t=>String(t).replace(/<[^>]+>/g,'');
   if(spec.choice){ const bs=[...root.querySelectorAll('.opts button:not(:disabled)')]; const want=tidy(spec.choice[spec.ans]); const b=bs.find(x=>wrong? x.textContent!==want : x.textContent===want); b.click(); return 'choice'; }
+  if(spec.gap){ const G=spec.gap, ins=[...root.querySelectorAll('.gapin:not(:disabled)')]; const chk=()=>[...root.querySelectorAll('button.btn.primary')].filter(b=>b.textContent==='Check'&&!b.disabled).pop()?.click();
+    const bad=G.bank.filter(w=>!G.ans.includes(w)), ws=wrong?G.ans.map((a,k)=>bad[k%bad.length]):G.ans;
+    if(ins.length) ins.forEach((i,k)=>{ i.value=ws[k]; i.dispatchEvent(new Event('input')); }); else ws.forEach(w=>{ const b=[...root.querySelectorAll('.gapbank button:not(:disabled)')].find(x=>x.textContent===w); b&&b.click(); });
+    chk(); if(wrong) chk(); return 'gap'; }
   if(spec.tap){ const parts=[...root.querySelectorAll('.tappic [data-part]')]; const t=wrong? parts.find(x=>x.getAttribute('data-part')!==spec.tap.ans) : parts.find(x=>x.getAttribute('data-part')===spec.tap.ans); t.dispatchEvent(new MouseEvent('click',{bubbles:true})); return 'tap:'+t.getAttribute('data-part'); }
   if(spec.sort){ const S=spec.sort; [...root.querySelectorAll('.sortrow')].forEach(r=>{ const txt=r.querySelector('.sortit').innerHTML; const it=S.items.find(i=>i[0]===txt); const k=wrong?(it[1]+1)%S.bins.length:it[1]; r.querySelectorAll('.binb')[k].click(); });
     [...root.querySelectorAll('button.btn.primary')].filter(b=>b.textContent==='Check'&&!b.disabled).pop().click(); return 'sort'; }
@@ -34,7 +38,8 @@ const ANSWER=`(function(spec, root, wrong){
    if(u.k==='why'||u.k==='method') clickOpt(u.c[u.a]); else if(u.k==='mistake'){ card.querySelectorAll('.wline')[u.bad].click(); clickOpt(u.fixes[u.fix]); } },u); await p.waitForTimeout(200); await nextQ(); return u.k; };
  const runeAnswer=async(wrong)=>{ const Q=await q();
    if(Q.type==='pick'){ await p.evaluate(k=>document.querySelector('.runecard .ideas button[data-k="'+k+'"]').click(),Q.obj.ans); await p.waitForTimeout(150); await p.evaluate(()=>[...document.querySelectorAll('.runecard button.btn.primary:not(.hide)')].pop().click()); await p.waitForFunction(()=>window.__fdq&&window.__fdq.type!=='pick',null,{timeout:10000}); return 'p'+await runeAnswer(wrong); }
-   if(Q.type==='brain'){ const i=wrong?(Q.obj.a+1)%Q.obj.c.length:Q.obj.a; await p.locator('.runecard .opts button').nth(i).click(); }
+   if(Q.type==='explain'){ const E=Q.obj; for(let t=0;t<(wrong?2:1);t++){ await p.fill('.runecard textarea.exin', wrong?'I am not really sure about it':E.model.slice(E.starter.length)); await p.locator('.runecard button.btn.primary',{hasText:'Check'}).click(); await p.waitForTimeout(300); } }
+   else if(Q.type==='brain'){ const i=wrong?(Q.obj.a+1)%Q.obj.c.length:Q.obj.a; await p.locator('.runecard .opts button').nth(i).click(); }
    else { const r=await ans(Q.obj.final.a,'.runecard .card',wrong); if(Q.type==='own'&&!(await p.locator('.runecard button.btn.primary:not(.hide)').count())){ await p.waitForTimeout(200); } }
    await p.waitForTimeout(250); await p.locator('.runecard button.btn.primary:not(.hide)').last().click(); return Q.type[0]+(wrong?'✗':'✓'); };
  const battle=async(wrongAt=[])=>{ await p.evaluate(()=>{ __fd.night.timeScale=14; }); await wf(()=>__fd.night.running);
@@ -49,7 +54,8 @@ const ANSWER=`(function(spec, root, wrong){
  log('2 dawn:', await p.locator('.go-day').textContent(), '| land:', await p.evaluate(()=>__fd.prog.currentNode().region.name), '| fort look', await p.evaluate(()=>__fd.fort.region)); await shot('dawn');
  // ---- Day 1: lesson, train, riddle, challenge ----
  await p.click('.go-day'); await p.waitForSelector('.daysheet');
- const learn=await p.evaluate(()=>__fd.prog.topic('sci2:1').t.learn.map(c=>c.t==='try'?{choices:c.q.choices,ans:c.q.ans,a:c.q.a}:null));
+ await p.evaluate(()=>{ const S=__fd.save.state; S.think={spw:{'sci2:1':{skip:1}}}; });   // Sentence, Phrase, Word has its own test (think-test.js)
+ const learn=await p.evaluate(()=>__fd.prog.topic('sci2:1').t.learn.map(c=>c.t==='try'?{choices:c.q.choices,ans:c.q.ans,a:c.q.a||(c.q.gap&&{gap:c.q.gap})}:null));
  for(const c of learn){ const card=p.locator('.sheet .chunk'); if(c){ if(c.choices) await card.locator('.opts button').nth(c.ans).click(); else await ans(c.a,'.sheet .chunk'); } await card.locator('.pager .btn.primary').click(); }
  log('3 lesson done, phase:', await p.locator('.sheet .ph.cur').textContent());
  for(let n=0;n<3;n++){ const Q=(await q()).obj; const specs=[...Q.steps.map(s=>s.a),Q.final.a];

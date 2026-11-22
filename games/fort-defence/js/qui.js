@@ -29,6 +29,7 @@ function MiniQ(q,onDone){
   let tries=0;
   const finish=(ok)=>{ fb.className="verdict "+(ok?"good":"mid"); fb.innerHTML=(ok?"<b>Yes!</b> ":"<b>Here's how:</b> ")+q.why; onDone(ok,tries); };
   if(q.ask) box.append(h("div",{class:"qs"},H(q.ask)));
+  if(q.gap){ box.append(AnswerBox({gap:q.gap},"",(t)=>{ tries=t; finish(true); },(t,f)=>{ tries=t; f.className="verdict bad"; f.textContent="Not quite. The red gap needs another word."; },()=>{ tries=2; finish(false); })); box.append(fb); return box; }
   if(q.choices){ const opts=h("div",{class:"opts"+(q.choices.some(c=>c.length>18)?" col":"")});
     q.choices.forEach((c,k)=>opts.append(h("button",{class:"opt",type:"button",onclick:e=>{ const b=e.currentTarget; if(k===q.ans){ b.classList.add("ok"); opts.querySelectorAll("button").forEach(x=>x.disabled=true); finish(true); } else { b.classList.add("no"); b.disabled=true; tries++; if(tries>=2){ opts.children[q.ans].classList.add("ok"); opts.querySelectorAll("button").forEach(x=>x.disabled=true); finish(false); } else { fb.className="verdict bad"; fb.textContent="Not quite. Have another look."; } } }},c)));
     box.append(opts);
@@ -78,6 +79,7 @@ function AnswerBox(spec,label,onOk,onWrong,onReveal,opts={}){
   if(spec.tap) return TapAnswer(spec,el,fb,onOk,onWrong,onReveal,max);
   if(spec.sort) return SortAnswer(spec,el,fb,onOk,onWrong,onReveal,max);
   if(spec.order) return OrderAnswer(spec,el,fb,onOk,onWrong,onReveal,max);
+  if(spec.gap) return GapAnswer(spec,el,fb,onOk,onWrong,onReveal,max);
   const inp=h("input",{class:"ans",type:"text",autocomplete:"off",spellcheck:"false","aria-label":"Answer"});
   const btn=h("button",{class:"btn primary",type:"button"},"Check");
   const ans=spec.expr!=null? spec.expr.replace(/\^2/g,"²").replace(/-/g," − ").replace(/\+/g," + ").replace(/\*/g,"") : spec.num!=null? N(spec.num) : "";
@@ -132,6 +134,40 @@ function OrderAnswer(spec,el,fb,onOk,onWrong,onReveal,max){
     tries++; slot.classList.add("no"); setTimeout(()=>slot.classList.remove("no"),600); onWrong&&onWrong(tries,fb); if(!onWrong){ fb.className="verdict bad"; fb.textContent="Not quite in order. Undo and try again."; }
     if(tries>=max){ done=true; used.length=0; O.forEach((t,k)=>used.push(k)); undo.disabled=check.disabled=true; paint(); onReveal&&onReveal(fb,"shown above"); } else { used.length=0; paint(); } }},"Check");
   paint(); el.append(slot,tray,h("div",{class:"row"},undo,check),fb); return el;
+}
+/* ---------- fill the gap ----------
+   {gap:{text:"The ___ of a thing fits the ___ it does.", ans:["shape","job"], bank:[...], key?}}
+   Word bank: tap a gap (the first empty one is chosen for him), then tap a word; tap a filled gap to empty it.
+   Typed: once the day has 3 stars (window.__fdGapTyped(key) says so) he types each word instead, with the
+   usual forgiving spelling check. */
+function GapAnswer(spec,el,fb,onOk,onWrong,onReveal,max){
+  const G=spec.gap, parts=G.text.split("___"), n=G.ans.length, typed=!!(G.typed||(G.key&&window.__fdGapTyped&&window.__fdGapTyped(G.key)));
+  const fill=Array(n).fill(null); let cur=0, tries=0, done=false;
+  const slots=[], line=h("div",{class:"gapline"});
+  parts.forEach((t,i)=>{ line.append(document.createTextNode(t)); if(i<n){
+    const s= typed ? h("input",{class:"gapin",type:"text",autocomplete:"off",spellcheck:"false","aria-label":`Gap ${i+1}`,size:Math.max(6,G.ans[i].length+1)})
+      : h("button",{class:"gapslot",type:"button","aria-label":`Gap ${i+1}`,onclick:()=>{ if(done) return; if(fill[i]!=null){ fill[i]=null; } cur=i; paint(); }},"\u00a0");
+    if(typed) s.addEventListener("input",()=>s.classList.remove("no"));
+    slots.push(s); line.append(s); } });
+  const bank=h("div",{class:"gapbank"});
+  const words=typed?[]:shuffle(G.bank);
+  words.forEach(w=>bank.append(h("button",{class:"gapw",type:"button",onclick:()=>{ if(done) return; let i=fill[cur]==null?cur:fill.indexOf(null); if(i<0) i=cur; fill[i]=w; const nx=fill.indexOf(null); cur=nx<0?i:nx; paint(); }},w)));
+  function paint(){ if(typed) return; slots.forEach((s,i)=>{ s.textContent=fill[i]==null?"\u00a0":fill[i]; s.classList.toggle("cur",!done&&i===cur); s.classList.toggle("full",fill[i]!=null); s.classList.remove("no"); });
+    bank.querySelectorAll("button").forEach(b=>{ const used=fill.filter(x=>x===b.textContent).length, have=words.filter(x=>x===b.textContent).length; b.disabled=done||used>=have; }); }
+  const same=(a,b)=>String(a).trim().toLowerCase()===String(b).trim().toLowerCase();
+  const reveal=()=>{ done=true; slots.forEach((s,i)=>{ if(typed){ s.value=G.ans[i]; s.disabled=true; } else s.textContent=G.ans[i]; s.classList.remove("no"); s.classList.add("ok"); }); check.disabled=true; paint(); };
+  const check=h("button",{class:"btn primary",type:"button",onclick:()=>{ if(done) return;
+    let spell=[];
+    const ok=G.ans.map((a,i)=>{ if(!typed) return fill[i]!=null&&same(fill[i],a); const v=slots[i].value; if(!v.trim()) return null; const r=checkAns({words:[a]},v); if(r.ok&&r.spell) spell.push(r.spell); return !!r.ok; });
+    if(ok.some(x=>x==null)||(!typed&&fill.some(x=>x==null))){ fb.className="verdict mid"; fb.textContent="Fill every gap first."; return; }
+    if(ok.every(Boolean)){ done=true; check.disabled=true; slots.forEach((s,i)=>{ s.classList.add("ok"); if(typed){ s.value=G.ans[i]; s.disabled=true; } }); paint(); fb.replaceChildren(); if(spell.length){ fb.className="verdict mid"; fb.textContent="Right! Check the spelling: "+spell.join(", "); } onOk(tries); return; }
+    tries++; ok.forEach((v,i)=>{ if(!v) slots[i].classList.add("no"); else slots[i].classList.add("fine"); });
+    onWrong&&onWrong(tries,fb); if(!onWrong){ fb.className="verdict bad"; fb.textContent="Not quite. Change the red gaps."; }
+    if(tries>=max){ reveal(); onReveal&&onReveal(fb,G.ans.join(", ")); } else if(!typed){ setTimeout(()=>{ ok.forEach((v,i)=>{ if(!v){ fill[i]=null; } }); cur=Math.max(0,fill.indexOf(null)); paint(); },700); } }},"Check");
+  paint();
+  el.append(h("div",{class:"small muted"},typed?"⌨️ Type the missing words":"👆 Tap a word to fill the glowing gap"),line,bank,check,fb);
+  if(typed) setTimeout(()=>{ try{ slots[0].focus({preventScroll:true}); }catch(e){} },30);
+  return el;
 }
 function runSteps(q,body,done){
   let k=0, helped=false, revealed=false;
@@ -256,4 +292,4 @@ function confNote(conf,right,review){
   return h("div",{class:"confnote "+T[0]},T[1]);
 }
 
-export { ConfidenceRow, attachConfidence, confNote, TapAnswer, SortAnswer, OrderAnswer, LearnView, MiniQ, SymKeys, QuestionCard, AnswerBox, runSteps, runOwn, UnderstandCard, UQ_LABEL };
+export { ConfidenceRow, attachConfidence, confNote, GapAnswer, TapAnswer, SortAnswer, OrderAnswer, LearnView, MiniQ, SymKeys, QuestionCard, AnswerBox, runSteps, runOwn, UnderstandCard, UQ_LABEL };
