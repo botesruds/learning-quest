@@ -13,6 +13,7 @@ const log=(...a)=>console.log(...a); const SHOTS=process.env.SHOTS||'';
  const ctx=await b.newContext(ipad?{...devices['iPad (gen 7)']}:{viewport:{width:1280,height:800}}); const p=await ctx.newPage(); const errs=[];
  p.on('pageerror',e=>errs.push('PAGEERR '+e.message)); p.on('console',m=>{ if(m.type()==='error') errs.push(m.text()); });
  const shot=async n=>{ if(SHOTS){ await p.waitForTimeout(400); await p.screenshot({path:SHOTS+'think-'+n+'.png'}); } };
+ const box=i=>p.evaluate(i=>document.querySelectorAll('.sheet .mmb')[i].click(),i);
  const clickT=(sel,txt)=>p.evaluate(([s,t])=>{ const el=[...document.querySelectorAll(s)].filter(e=>e.textContent.includes(t)&&!e.disabled).pop(); if(!el) throw new Error('no '+s+' '+t); el.click(); },[sel,txt]);
  await p.goto('http://localhost:8850/games/fort-defence/?practice&lowgfx&subject=science'); await p.waitForSelector('.logo',{timeout:30000});
  await p.click('.btn.pulse'); await p.waitForSelector('.dawn .go-day');
@@ -102,16 +103,16 @@ const log=(...a)=>console.log(...a); const SHOTS=process.env.SHOTS||'';
    const a1=await card.boundingBox(), b1=await box.boundingBox(); await p.mouse.move(a1.x+20,a1.y+15); await p.mouse.down(); await p.mouse.move(a1.x+60,a1.y-10,{steps:4}); await p.mouse.move(b1.x+b1.width/2,b1.y+b1.height/2,{steps:8}); await p.mouse.up();
    await p.waitForTimeout(200); log('10 drag "'+t.slice(0,22)+'":', await p.locator('.sheet .verdict').last().textContent()); }
  // one wrong drop by tapping, then the rest right
- { const t=await p.locator('.sheet .mmtray .mmcard').first().textContent(); await p.locator('.sheet .mmtray .mmcard').first().click(); await p.locator('.sheet .mmb').nth((owner[t]+1)%map.branches.length).click(); log('   wrong drop:', await p.locator('.sheet .verdict').last().textContent()); }
- for(let k=0;k<30&&await p.locator('.sheet .mmtray .mmcard').count();k++){ const t=await p.locator('.sheet .mmtray .mmcard').first().textContent(); await p.locator('.sheet .mmtray .mmcard').first().click(); await p.locator('.sheet .mmb').nth(owner[t]).click(); await p.waitForTimeout(40); }
+ { const t=await p.locator('.sheet .mmtray .mmcard').first().textContent(); await p.locator('.sheet .mmtray .mmcard').first().click(); await box((owner[t]+1)%map.branches.length); log('   wrong drop:', await p.locator('.sheet .verdict').last().textContent()); }
+ for(let k=0;k<30&&await p.locator('.sheet .mmtray .mmcard').count();k++){ const t=await p.locator('.sheet .mmtray .mmcard').first().textContent(); await p.locator('.sheet .mmtray .mmcard').first().click(); await box(owner[t]); await p.waitForTimeout(40); }
  await p.waitForSelector('.sheet .celebrate'); await shot('map-l1');
  log('11 level 1:', await p.locator('.sheet .celebrate h2').textContent(), await p.locator('.sheet .celebrate p').first().textContent());
  // level 2: main branches (with cards from other lands), then details
  await clickT('.sheet .celebrate .bigbtn','Level 2'); await p.waitForSelector('.sheet .mm'); let fake=0;
  for(let k=0;k<40&&await p.locator('.sheet .mmtray .mmcard').count();k++){ const c=p.locator('.sheet .mmtray .mmcard').first(), t=await c.textContent(); await c.click();
    const bi=map.branches.findIndex(x=>x.name===t);
-   if(bi>=0||!(t in owner)){ const empty=await p.evaluate(()=>[...document.querySelectorAll('.sheet .mmb')].findIndex(b=>b.classList.contains('empty'))); await p.locator('.sheet .mmb').nth(Math.max(0,empty)).click(); if(bi<0){ fake++; if(fake===1) log('12 other land card:', await p.locator('.sheet .verdict').last().textContent()); } }
-   else { const at=await p.evaluate(n=>[...document.querySelectorAll('.sheet .mmb .mmh')].findIndex(h=>h.textContent===n),map.branches[owner[t]].name); await p.locator('.sheet .mmb').nth(at).click(); }
+   if(bi>=0||!(t in owner)){ const empty=await p.evaluate(()=>[...document.querySelectorAll('.sheet .mmb')].findIndex(b=>b.classList.contains('empty'))); await box(Math.max(0,empty)); if(bi<0){ fake++; if(fake===1) log('12 other land card:', await p.locator('.sheet .verdict').last().textContent()); } }
+   else { const at=await p.evaluate(n=>[...document.querySelectorAll('.sheet .mmb .mmh')].findIndex(h=>h.textContent===n),map.branches[owner[t]].name); await box(at); }
    await p.waitForTimeout(40); }
  await p.waitForSelector('.sheet .celebrate'); log('   level 2:', await p.locator('.sheet .celebrate h2').textContent(), '| badge:', await p.locator('.sheet .celebrate p').nth(1).textContent(), '| other-land cards:', fake); await shot('map-l2');
  // level 3: link words and a cross-link
@@ -125,8 +126,8 @@ const log=(...a)=>console.log(...a); const SHOTS=process.env.SHOTS||'';
  await clickT('.sheet .bigbtn','Send my map'); log('14 too early:', await p.locator('.sheet .verdict').last().textContent());
  for(const br of ['Cell parts','Plants','Moving things']){ await p.fill('.sheet input[aria-label="New main branch"]',br); await clickT('.sheet button','＋ Branch'); }
  const wsAll=['nucleus','membrane','cytoplasm','cell wall','chloroplast','diffusion','oxygen'];
- for(const [i,w] of wsAll.entries()){ await p.evaluate(w=>[...document.querySelectorAll('.sheet .mmtray .mmcard')].find(b=>b.textContent===w).click(),w); await p.locator('.sheet .mmb').nth(i<3?0:i<5?1:2).click(); }
- await p.fill('.sheet input[aria-label="New card"]','particles spread out'); await clickT('.sheet button','＋ Card'); await p.locator('.sheet .mmb').nth(2).click(); await shot('map-l4');
+ for(const [i,w] of wsAll.entries()){ await p.evaluate(w=>[...document.querySelectorAll('.sheet .mmtray .mmcard')].find(b=>b.textContent===w).click(),w); await box(i<3?0:i<5?1:2); }
+ await p.fill('.sheet input[aria-label="New card"]','particles spread out'); await clickT('.sheet button','＋ Card'); await box(2); await shot('map-l4');
  await clickT('.sheet .bigbtn','Send my map'); await p.waitForSelector('.sheet .celebrate');
  log('   own map sent:', await p.locator('.sheet .celebrate h2').textContent(), '| desk:', await p.evaluate(()=>JSON.stringify(__fd.save.state.wr.desk.slice(-1)[0].text)));
  // parent corner section and reload

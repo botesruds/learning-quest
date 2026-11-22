@@ -197,7 +197,7 @@ export function createMapRoom({ save, prog, day, toast, onChange }) {
       const col = COLORS[i % COLORS.length], br = b == null ? null : map.branches[b];
       const box = h("div", { class: "mmb" + (b == null ? " empty" : ""), style: `--c:${col}`, "data-i": i, onclick: () => onBox && onBox(i) },
         h("div", { class: "mmh" }, br ? br.name : "＋ a main branch"),
-        links && br ? links(b, box) : null,
+        links && br ? links(b) : null,
         h("ul", {}, ...Object.entries(placed).filter(([c, at]) => at === i).map(([c]) => h("li", {}, c))));
       return box;
     });
@@ -241,7 +241,7 @@ export function createMapRoom({ save, prog, day, toast, onChange }) {
         if (!miss[c.t]) firstRight++; total++;
         if (c.prim != null) slots[i] = c.prim; else placed[c.t] = i;
         queue = queue.filter(x => x !== c); sel = null; sfx("correct"); fb.className = "verdict good"; fb.textContent = c.prim != null ? `“${c.t}” is a main branch.` : "Yes! It belongs there.";
-        if (lv === 2 && !queue.some(x => x.prim != null)) { queue = queue.filter(x => !x.fake).concat(secs); fb.textContent = "Every main branch is in place. Now the details."; }
+        if (lv === 2 && c.prim != null && !queue.some(x => x.prim != null)) { queue = queue.filter(x => !x.fake).concat(secs); fb.textContent = "Every main branch is in place. Now the details."; }
       } else {
         sfx("wrong"); miss[c.t] = (miss[c.t] || 0) + 1; fb.className = "verdict bad";
         if (c.fake) { fb.textContent = `“${c.t}” isn't about ${r.name}. It belongs to another land.`; queue = queue.filter(x => x !== c); sel = null; }
@@ -267,7 +267,7 @@ export function createMapRoom({ save, prog, day, toast, onChange }) {
   function linksLevel(r, map) {
     const slots = map.branches.map((b, i) => i), placed = {}; map.branches.forEach((b, i) => b.cards.forEach(c => (placed[c] = i)));
     const named = {}; let right = 0; const fb = h("div"), wrap = h("div");
-    const linkUI = (b, box) => {
+    const linkUI = b => {
       if (named[b]) return h("div", { class: "mmlink ok" }, "↳ " + map.branches[b].link);
       const others = shuffle(map.branches.filter((x, j) => j !== b).map(x => x.link)).slice(0, 2), opts = shuffle([map.branches[b].link, ...others]);
       let tries = 0;
