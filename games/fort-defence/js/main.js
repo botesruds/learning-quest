@@ -8,6 +8,7 @@ import { setStyle } from "./pieces.js";
 import { createProgress } from "./progress.js";
 import { createDay } from "./day.js";
 import { createNight } from "./night.js";
+import { createLibrary } from "./library.js";
 import { MATS, PIECES } from "./pieces.js";
 import { createBuilder } from "./builder.js";
 
@@ -32,7 +33,7 @@ stage.onFrame((dt, t) => live.forEach(o => o.userData.update && o.userData.updat
 const addLive = o => { if (o.userData.update) live.add(o); scene.add(o); return o; };
 
 let keep = null, heroObj = null, petObj = null, bannerG = null, bannerN = -1;
-let island = null, water = null, sceneryG = null, lookNow = 1, fort = null, builder = null, prog = null, day = null, night = null;
+let island = null, water = null, sceneryG = null, lookNow = 1, fort = null, builder = null, prog = null, day = null, night = null, library = null;
 function buildWorld(region = 1) {
   const L = REGION_LOOK[region];
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -94,7 +95,7 @@ function setLook(region) {
   if (!REGION_LOOK[region] || region === lookNow) return;
   lookNow = region; const L = REGION_LOOK[region];
   island.userData.setLook(region); scenery(region);
-  water.material.color.set(L.water); water.material.emissive && water.material.emissive.set(L.lava ? 0xff4a00 : 0x000000); water.material.emissiveIntensity = L.lava ? 0.8 : 1;
+  water.material.color.set(L.water); water.material.emissive && water.material.emissive.set(L.lava ? (L.glow || 0xff4a00) : 0x000000); water.material.emissiveIntensity = L.lava ? 0.8 : 1;
 }
 const regionNow = () => { const n = prog.currentNode(); return n && n.region ? (n.region.look || n.region.n) : 1; };
 buildWorld(1);
@@ -138,7 +139,7 @@ function titleScreen() {
   if (save.practice) parts.push(h("div", { class: "banner" }, "Practice save: progress stays on this device only"));
   parts.push(h("div", { class: "title fade-in" },
     h("h1", { class: "logo" }, "Fort ", h("span", {}, "Defence")),
-    h("p", { class: "tag" }, "Algebra Quest · Letter Land"),
+    h("p", { class: "tag" }, prog.pack.title + " · " + prog.pack.unit),
     play));
   ui.replaceChildren(...parts);
   setTimeout(() => play.focus({ preventScroll: true }), 50);
@@ -178,7 +179,7 @@ function dawnScreen() {
   } else {
     const lord = cur.t === "final" ? cur.region.final : cur.region.lord;
     main = h("button", { class: "btn pulse go-day", type: "button", onclick: () => { if (cur.t === "lord" && !prog.lordReady(cur.pack, cur.region)) { toast("Repair the weak spots first."); return; } startSiege(cur); } }, `${cur.t === "final" ? "🐉" : "👹"} ${lord.name[0].toUpperCase() + lord.name.slice(1)}`);
-    const b = S().bosses[cur.t === "final" ? "final" : prog.lordKey(cur.pack, cur.region)];
+    const b = S().bosses[prog.bossKey(cur)];
     sub = b && b.won ? "You beat this demon lord! Fight again for practice and gold." : b ? `Best so far: ${b.best} hits. ${lord.need || 8} win. Your fort is ready!` : `Every day in ${cur.region.name} is mastered. The demon lord is coming! ${lord.need || 8} hits win.`;
   }
   const chest = prog.road.find(n => n.t === "chest" && !prog.nodeDone(n) && n.region === (cur.region || {}));
@@ -190,6 +191,7 @@ function dawnScreen() {
       h("button", { class: "btn small blue", type: "button", onclick: () => { sfx("click"); rig.autoSpin = 0; stage.flyTo(BUILD_VIEW, 1.2); buildScreen(); } }, "🔨 Build"),
       h("button", { class: "btn small plain", type: "button", onclick: () => { sfx("click"); day.openMap(); } }, "📜 Quest map"),
       h("button", { class: "btn small plain", type: "button", onclick: () => { sfx("click"); day.openShop(); } }, "🛡️ Hero shop"),
+      library && library.has() ? h("button", { class: "btn small plain libbtn" + (library.news() ? " new" : ""), type: "button", onclick: () => { sfx("click"); library.open(); } }, "📚 Library", library.news() ? h("i", { class: "dot", "aria-label": "something new" }) : null) : null,
       chest ? h("button", { class: "btn small gold", type: "button", onclick: () => { sfx("click"); day.openChest(chest.pack, chest.region); } }, "🎁 New scout report") : null,
       crack ? h("button", { class: "btn small crackbtn", type: "button", onclick: () => { sfx("click"); day.openRepair(crack); } }, `🔧 Fix a crack (${cracks.length})`) : null));
   ui.replaceChildren(hud([back]), matsChips(), h("div", { class: "grow" }), card);
@@ -296,6 +298,7 @@ function demoFort() {
   fort = createFort({ scene, state: S, region: 1, island, onFrameObjects: live });
   builder = createBuilder({ stage, fort, fx, save, toast });
   prog = createProgress(S, () => save.commit());
+  document.title = "Fort Defence · " + prog.pack.subject;
   day = createDay({ save, prog, stage, toast, onLand: landCheck,
     onBuild: () => { rig.autoSpin = 0; stage.flyTo(BUILD_VIEW, 1.2); buildScreen(); },
     onNight: key => startNight(key),
@@ -304,11 +307,12 @@ function demoFort() {
     onVisit: r => visitFort(r),
     onFixTopic: key => { fort.crackList().filter(c => c.topic === key).forEach(c => fort.fixCrack(c.cell)); save.commit(); },
     onClose: why => { if (why === "stop") { stopMusic(); stage.flyTo(TITLE_VIEW, 1.4); setTimeout(() => (rig.autoSpin = 0.05), 1400); titleScreen(); toast("Great work today, Commander. Your fort is saved and waiting."); } else if (afterParent) { const w = afterParent; afterParent = null; if (w === "title") titleScreen(); else dawnScreen(); } else if (why !== "build" && why !== "nav" && why !== "night") dawnScreen(); } });
+  library = createLibrary({ save, prog, day, toast, onChange: () => {} });
   night = createNight({ stage, fx, fort, island, save, prog, ui, toast, hud, onMorning: r => day.morning(r), onLeave: () => { playMusic("day"); dawnScreen(); } });
   showRegion(regionNow());
   titleScreen();
   const wake = () => { if (unlockAudio() && S().music && !builder.selected) playMusic("title"); removeEventListener("pointerdown", wake); };
   addEventListener("pointerdown", wake);
   if (DEV && save.practice) bench();   // the test bench never touches a real save
-  window.__fd = { stage, save, fx, fort, builder, prog, day, night, THREE, dawnScreen, startNight, startSiege, demoFort, setLook, dressHero, showRegion, visitFort };
+  window.__fd = { stage, save, fx, fort, builder, prog, day, night, library, THREE, dawnScreen, startNight, startSiege, demoFort, setLook, dressHero, showRegion, visitFort };
 })();

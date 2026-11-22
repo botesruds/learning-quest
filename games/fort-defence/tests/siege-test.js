@@ -8,6 +8,7 @@ const log=(...a)=>console.log(...a);
  const wf=(fn,arg,t=30000)=>p.waitForFunction(fn,arg,{timeout:t}).then(()=>true).catch(()=>false);
  const val=spec=>'num' in spec? String(spec.num) : 'expr' in spec? spec.expr : spec.words? spec.words[0] : null;
  const answerRune=async(wrong)=>{ const Q=await p.evaluate(()=>window.__fdq);
+   if(Q.type==='pick'){ await p.evaluate(k=>document.querySelector('.runecard .ideas button[data-k="'+k+'"]').click(),Q.obj.ans); await p.waitForTimeout(150); await p.evaluate(()=>[...document.querySelectorAll('.runecard button.btn.primary:not(.hide)')].pop().click()); await p.waitForFunction(()=>window.__fdq&&window.__fdq.type!=='pick',null,{timeout:10000}); return 'p'+await answerRune(wrong); }
    if(Q.type==='brain'){ const i= wrong? (Q.obj.a+1)%Q.obj.c.length : Q.obj.a; await p.locator('.runecard .opts button').nth(i).click(); }
    else { const spec=Q.obj.final.a; if(spec.choice){ const want=spec.choice[spec.ans]; await p.evaluate(([want,wrong])=>{ const bs=[...document.querySelectorAll('.runecard .opts button')]; (wrong? bs.find(b=>b.textContent!==want): bs.find(b=>b.textContent===want)).click(); },[want,wrong]); }
      else await p.evaluate(v=>{ const inp=[...document.querySelectorAll('.runecard input.ans:not(:disabled)')].pop(); inp.value=v; inp.dispatchEvent(new Event('input')); inp.parentElement.querySelector('button').click(); }, wrong?'999':val(spec)); }

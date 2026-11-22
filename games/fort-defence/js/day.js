@@ -7,6 +7,7 @@ import { sfx } from "./audio.js";
 import { MATS, PIECES } from "./pieces.js";
 import { HEROES, PETS, makeHero, makePet } from "./models.js";
 import { objThumb } from "./thumbs.js";
+import { STRATEGIES } from "../packs/reading/strategies.js";
 
 /* what each kind of answer earns (see the design document) */
 export const LOOT = {
@@ -229,11 +230,11 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
     const st = save.status(); onChange && onChange(); paintLoot();
     const repairs = r.wrong.filter(k => prog.topic(k)).sort((a, b) => prog.dayNo(a) - prog.dayNo(b));
     set(celebrate(h("div", { class: "bigstars" }, r.won ? (r.fin ? "🏆" : "🏅") : "🌅"),
-      h("h1", {}, r.won ? (r.fin ? "You beat the Algebra Dragon!" : `You beat ${r.lord.name}!`) : `${r.hits} hits. ${r.need} were needed.`),
+      h("h1", {}, r.won ? `You beat ${r.lord.name}!` : `${r.hits} hits. ${r.need} were needed.`),
       h("div", { class: "nightstats" },
         h("span", { class: "lm" }, `💥 ${r.hits} of ${r.total} hits`), h("span", { class: "lm" }, `👾 ${r.kills} defeated`),
         r.gold ? h("span", { class: "lm" }, `🪙 +${r.gold}`) : null, r.crystal ? h("span", { class: "lm" }, `💎 +${r.crystal}`) : null),
-      r.won ? h("p", { style: "font-weight:800" }, r.fin ? "You are an Algebra Champion. You're ready for the exam." : nextRegion ? `🔓 ${nextRegion.emoji} ${nextRegion.name} is open! Build a new fort there in a new style. Your materials, gold and plans come with you, and your ${r.region.name} fort stays just as you built it.` : "🔓 The next part of the quest is open!")
+      r.won ? h("p", { style: "font-weight:800" }, r.fin ? (prog.pack.champion || "You are a champion.") + " You're ready for the test." : nextRegion ? `🔓 ${nextRegion.emoji} ${nextRegion.name} is open! Build a new fort there in a new style. Your materials, gold and plans come with you, and your ${r.region.name} fort stays just as you built it.` : "🔓 The next part of the quest is open!")
         : h("p", {}, "The demon lord cracked your walls where you missed. Repair these days (3 right on your own each), then face the lord again:"),
       !r.won && repairs.length ? h("div", { class: "row", style: "justify-content:center;flex-wrap:wrap;gap:8px" }, ...repairs.map(k => h("span", { class: "lm" }, `🔧 Day ${prog.dayNo(k)}: ${prog.topic(k).t.short}`))) : null,
       r.won && r.cracks.length ? h("p", { class: "cracknews" }, `💜 ${r.cracks.length} weak spot${r.cracks.length > 1 ? "s" : ""} cracked. Fix ${r.cracks.length > 1 ? "them" : "it"} from the dawn screen with 2 right answers.`) : null,
@@ -378,11 +379,11 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
   const when = t => new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   function openParent() {
     if (!sheet) mountSheet(); ctx = null;
-    head([h("div", { class: "row", style: "justify-content:space-between;align-items:center" }, h("h2", {}, "⚙️ Parent corner"), closeBtn("✕ Back to the game"))]);
+    head([h("div", { class: "row", style: "justify-content:space-between;align-items:center" }, h("div", {}, h("div", { class: "eyebrow" }, `${prog.pack.subject} · ${prog.pack.unit}`), h("h2", {}, "⚙️ Parent corner")), closeBtn("✕ Back to the game"))]);
     const paint = () => {
       const parts = [h("div", { class: "card small pc-how" }, h("b", {}, "How progress is earned"),
-        h("p", {}, "Each day is one topic. ⭐ 1: the briefing and 3 step-by-step questions. ⭐ 2: 3 right on his own before 3 misses. ⭐ 3: the Brain check at night, 3 of 4 'why' questions right. The next day only opens at 3 stars."),
-        h("p", {}, "Each land ends with a demon lord: 8 quick questions plus 2 'why' questions, 8 hits to win. Every miss marks that day for repair, and he must pass its Challenge again before the rematch. The next land only opens after the lord is beaten. The Algebra Dragon is the practice exam (13 of 16)."),
+        h("p", { class: "small muted" }, "This shows the subject being played. Open the other subject from the home page to see its progress."), h("p", {}, "Each day is one topic. ⭐ 1: the briefing and 3 step-by-step questions. ⭐ 2: 3 right on his own before 3 misses. ⭐ 3: the Brain check at night, 3 of 4 'why' questions right. The next day only opens at 3 stars."),
+        h("p", {}, "Each land ends with a demon lord: 8 quick questions plus 2 'why' questions, 8 hits to win. Every miss marks that day for repair, and he must pass its Challenge again before the rematch. The next land only opens after the lord is beaten. The final boss is the practice exam (13 of 16)."),
         h("p", { class: "row", style: "gap:6px;flex-wrap:wrap;align-items:center" }, "Recent answers: ", h("span", { class: "rdots" }, h("i", { class: "own" })), "on his own ", h("span", { class: "rdots" }, h("i", { class: "stp" })), "with steps ", h("span", { class: "rdots" }, h("i", { class: "hlp" })), "second try ", h("span", { class: "rdots" }, h("i", { class: "bad" })), "wrong"))];
       prog.regions.forEach(({ pack, r }) => {
         const rows = prog.road.filter(n => n.pack === pack && n.region === r && n.t === "level").map(n => {
@@ -393,13 +394,22 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
         });
         const ck = prog.chestKey(pack, r), cb = h("input", { type: "checkbox" }); cb.checked = !!S().classNow[ck];
         cb.addEventListener("change", () => { S().classNow[ck] = cb.checked; save.commit(); onChange && onChange(); });
-        const lk = r.final ? "final" : prog.lordKey(pack, r), bs = S().bosses[lk], lord = r.final || r.lord;
+        const lk = r.final ? prog.finalKey(pack) : prog.lordKey(pack, r), bs = S().bosses[lk], lord = r.final || r.lord;
         parts.push(h("section", { class: "stack pc-region" }, h("div", { class: "row", style: "justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap" }, h("h3", {}, `${r.emoji} ${r.name}`),
           h("label", { class: "pc-check" }, cb, "Open this land now (class is doing it)")), ...rows,
           lord ? h("p", { class: "small" }, `${r.final ? "🐉" : "👹"} ${cap(lord.name)}: ${bs ? (bs.won ? "beaten" : "not beaten yet") + `, best ${bs.best} hits` : "not faced yet"}`) : null));
       });
-      const ex = S().exams || [];
-      if (ex.length) parts.push(h("div", { class: "card small" }, h("b", {}, "Practice exam (Algebra Dragon) attempts"), h("p", {}, ex.slice(-6).map(e => `${when(e.t)}: ${e.score}/${e.total}`).join(" · "))));
+      if (prog.pack.reading) {   // the Library tower: reading strategies, its own track
+        const L = S().lib || {}, fl = L.fl || {}, rd = L.rd || {}, ds = prog.pack.reading.dispatches;
+        const nRead = ds.filter(d => rd[prog.keyOf(prog.pack, d.day)] && rd[prog.keyOf(prog.pack, d.day)].done).length;
+        parts.push(h("section", { class: "stack pc-region" }, h("h3", {}, "📚 Library tower (reading)"),
+          h("p", { class: "small muted" }, `Its own track: it never blocks a science day. Each floor teaches one reading strategy (lesson ⭐, 3 right on his own ⭐⭐, a mixed check where he names the strategy ⭐⭐⭐). Dispatches read: ${nRead} of ${ds.length}.`),
+          ...STRATEGIES.map(st => { const f = fl[st.k] || {}, n = f.stars || 0;
+            return h("div", { class: "pc-row" }, h("b", { class: "pc-day" }, st.icon), h("div", { class: "pc-t" }, h("b", {}, `Floor ${st.n}: ${st.name}`), h("div", { class: "small muted" }, st.does)),
+              h("span", { class: "pc-st", "aria-label": n + " stars" }, "⭐".repeat(n) + "☆".repeat(3 - n)), dots("lib:" + st.k)); })));
+      }
+      const ex = (S().exams || []).filter(e => (e.pack || "algebra-u3") === prog.pack.id);
+      if (ex.length) parts.push(h("div", { class: "card small" }, h("b", {}, `Practice exam (${prog.pack.regions.find(r => r.final) ? cap(prog.pack.regions.find(r => r.final).final.name) : "final boss"}) attempts`), h("p", {}, ex.slice(-6).map(e => `${when(e.t)}: ${e.score}/${e.total}`).join(" · "))));
       let armed = false;
       const ub = h("button", { class: "btn small", type: "button", onclick: () => { if (S().unlockAll) { S().unlockAll = false; save.commit(); onChange && onChange(); paint(); return; } if (!armed) { armed = true; ub.textContent = "Tap again to open every day"; return; } S().unlockAll = true; save.commit(); onChange && onChange(); paint(); } }, S().unlockAll ? "Lock days to mastery again" : "Open every day");
       const st = save.status();
@@ -411,5 +421,8 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
     paint();
   }
 
-  return { open: open_, openChest, openMap, openShop, openParentGate, openParent, openRepair, morning, close, grant, get isOpen() { return !!sheet; }, paintLoot };
+  /* the sheet's helpers, for other screens that live on the same sheet (the Library tower) */
+  const kit = () => { if (!sheet) mountSheet(); ctx = { key: null, loot: {} }; paintLoot(); return { head, set, closeBtn, mission, celebrate, bigbtn, linkbtn, grant, lootbar }; };
+
+  return { kit, open: open_, openChest, openMap, openShop, openParentGate, openParent, openRepair, morning, close, grant, get isOpen() { return !!sheet; }, paintLoot };
 }

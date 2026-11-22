@@ -43,6 +43,11 @@ export const STYLES = {
   3: { log: 0x9fb6c9, log2: 0x86a0b6, tip: 0xffffff, stone: 0xcfe8ff, stone2: 0xa9d0f2, stone3: 0xeef8ff, roof: 0x6fb7ff, roof2: 0x9be0ff, banner: 0x2f6fbf, metal: 0x7fa6c9 },   // Pattern Peaks: ice and crystal
   4: { log: 0x9c6b3a, log2: 0x7d522b, tip: 0xe0b45a, stone: 0xc9a14a, stone2: 0x9c7a35, stone3: 0xe0c27a, roof: 0x6b6f78, roof2: 0x8a8f99, metal: 0x8a5a2e, banner: 0xff8a3d },  // Robot Factory: brass and gears
   5: { log: 0x4a3030, log2: 0x3a2424, tip: 0xffc83d, dark: 0x2b2127, stone: 0x4a4352, stone2: 0x35303d, stone3: 0x5c5466, roof: 0xffc83d, roof2: 0xe2452e, banner: 0xe2452e, metal: 0x2b2127 },   // Final Castle: obsidian and gold
+  6: { log: 0x7acb58, log2: 0x5fb346, tip: 0xff7eb6, stone: 0xe8fbe4, stone2: 0xbfe8c4, stone3: 0xf8fff5, roof: 0xff7eb6, roof2: 0x3fd0c9, banner: 0x3fbf7f, metal: 0x2fa38a },     // Cell City: soft membranes, pink roofs
+  7: { log: 0xd8ccb0, log2: 0xc4b48f, tip: 0xffffff, stone: 0xf3ead2, stone2: 0xd8ccb0, stone3: 0xfffaf0, roof: 0xd2382b, roof2: 0xb5532f, banner: 0xd2382b, metal: 0x8c6a4a },   // Body Builders: bone white, red roofs
+  8: { log: 0xb5734f, log2: 0x8c5a3a, tip: 0xffe0b0, stone: 0xd98b5f, stone2: 0xb5734f, stone3: 0xf0b48a, roof: 0x8c3b2a, roof2: 0xd2382b, banner: 0xc0392b, metal: 0x6b4a32 },   // Muscle Mountain: red rock
+  9: { log: 0x90a4ae, log2: 0x78909c, tip: 0x7ff0ff, stone: 0xdfe8ef, stone2: 0xb0bec5, stone3: 0xf5f9fc, roof: 0x2fb7e6, roof2: 0x5c6bc0, banner: 0x5c6bc0, metal: 0x546e7a },   // Investigation Lab: steel and glass
+  10: { log: 0x4a2a5a, log2: 0x3a2048, tip: 0x7cf3ff, dark: 0x2f2440, stone: 0x5b4369, stone2: 0x4a3558, stone3: 0x6f5580, roof: 0xff5fae, roof2: 0x7cf3ff, banner: 0xff5fae, metal: 0x2f2440 },   // Brain Citadel: purple and neon
 };
 let styleNow = 1;
 export function setStyle(r) { styleNow = STYLES[r] ? r : 1; Object.assign(C, BASE, STYLES[styleNow]); }

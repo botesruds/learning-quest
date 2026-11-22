@@ -214,3 +214,56 @@ body.sheet-open #ui{display:none}
 .pc-st{white-space:nowrap}
 .pc-check{display:flex;gap:6px;align-items:center;font-size:.92rem}
 .pc-how p{margin:6px 0}
+
+/* ---- science packs: pictures you tap, cards you sort, cards you put in order ---- */
+.sheet .sci{display:block;width:100%;max-width:440px;height:auto;margin:0 auto}
+.sheet .sci text{font:700 13px var(--f-display);fill:var(--ink)}
+.sheet .sci .lbl{font-size:12px}
+.sheet .tappic .sci [data-part]{cursor:pointer;transition:filter .15s, opacity .15s}
+.sheet .tappic .sci [data-part]:hover,.sheet .tappic .sci [data-part]:focus{filter:brightness(1.12) drop-shadow(0 0 3px #2b6fd6);outline:none}
+.sheet .tappic .sci .tap-ok{filter:drop-shadow(0 0 5px #1C8548) brightness(1.1);stroke:#1C8548 !important;stroke-width:4px !important}
+.sheet .tappic .sci .tap-no{filter:drop-shadow(0 0 5px #BF342C);opacity:.55}
+.sheet .sortlist{display:flex;flex-direction:column;gap:8px}
+.sheet .sortrow{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--surface)}
+.sheet .sortrow.no{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 7%,var(--surface))}
+.sheet .sortrow.ok{border-color:var(--good)}
+.sheet .sortit{font-weight:700;flex:1 1 140px}
+.sheet .bins{display:flex;gap:6px;flex-wrap:wrap}
+.sheet .binb{border:1.5px solid var(--line);background:var(--surface-2);border-radius:999px;padding:6px 12px;min-height:40px;font:700 .9rem var(--f-display);cursor:pointer}
+.sheet .binb.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.sheet .ordslot{min-height:52px;border:2px dashed var(--line);border-radius:12px;padding:8px 8px 8px 34px;margin:0;display:flex;flex-direction:column;gap:4px}
+.sheet .ordslot li{font-weight:700}
+.sheet .ordslot.ok{border-color:var(--good);border-style:solid}
+.sheet .ordslot.no{border-color:var(--bad)}
+.sheet .ordtray{display:flex;flex-wrap:wrap;gap:8px}
+.sheet .ordt{border-radius:10px;padding:8px 12px;background:#fff3cf;border:2px solid #e8c766;box-shadow:0 3px 0 #d9b44a;min-height:44px;font:700 .95rem var(--f-display);cursor:pointer;text-align:left}
+.sheet .ordt:disabled{opacity:.3;box-shadow:none;cursor:default}
+.sheet .simbox{display:flex;flex-direction:column;gap:10px;align-items:center}
+.sheet .simbox .row{justify-content:center}
+.sheet .pulse-time{font:800 2.4rem var(--f-display);text-align:center}
+.sheet table.sci-t{border-collapse:collapse;width:100%;font-size:.95rem}
+.sheet table.sci-t td,.sheet table.sci-t th{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+.sheet table.sci-t th{background:var(--surface-2)}
+/* ---------- the Library tower (js/library.js) ---------- */
+.sheet .passage{border:2px solid #d9c48f;border-radius:14px;background:#fffdf6;padding:12px 14px;display:flex;flex-direction:column;gap:6px;box-shadow:inset 0 0 0 4px #fbf3dc}
+.sheet .passage .ptitle{font-size:1.05rem}
+.sheet .passage .ptext{margin:0;line-height:1.75;font-size:1.04rem}
+.sheet .passage .sent{border-radius:6px;padding:1px 0;transition:background .2s}
+.sheet .passage .sent.hidden{display:none}
+.sheet .passage.veiled::after{content:"🔮 Predict first: the rest of the text appears after you answer.";font-size:.85rem;color:var(--muted);font-weight:700}
+.sheet .passage .sent.clue{background:#fff0a8;box-shadow:0 0 0 2px #f2cf3c}
+.sheet .passage.tapmode .sent{cursor:pointer;background:#eef4ff;box-shadow:0 0 0 1px #c8d8f5;margin-right:2px}
+.sheet .passage.tapmode .sent:hover,.sheet .passage.tapmode .sent:focus{background:#d9e7ff;outline:none}
+.sheet .passage .sent.tap-ok{background:color-mix(in srgb,var(--good) 22%,#fff);box-shadow:0 0 0 2px var(--good)}
+.sheet .passage .sent.tap-no{background:color-mix(in srgb,var(--bad) 18%,#fff)}
+.sheet .gword{border:0;background:none;padding:0;font:inherit;color:inherit;text-decoration:underline dotted 2px #b08a2e;text-underline-offset:3px;cursor:help}
+.sheet .gloss:empty{display:none}
+.sheet .gloss{font-size:.92rem;background:#eef6ff;border-radius:8px;padding:5px 10px}
+.sheet .schip{display:inline-flex;gap:4px;align-items:center;border-radius:99px;padding:3px 11px;background:#efe6ff;color:#4b2aa8;font-weight:800;font-size:.85rem}
+.sheet .schip.muted{background:var(--surface-2);color:var(--muted)}
+.sheet .toolkit{border:1.5px solid #cdb8f5;background:#f7f2ff;border-radius:12px;padding:8px 14px}
+.sheet .toolkit ol{margin:4px 0 0;padding-left:22px}
+.sheet .toolkit.hide{display:none}
+.sheet .kitcard{border:1.5px solid #cdb8f5;background:#f7f2ff;border-radius:12px;padding:8px 12px;margin-top:6px}
+.sheet .kitcard summary{cursor:pointer;font-weight:700}
+.sheet .kitcard ol{margin:6px 0 0;padding-left:22px}

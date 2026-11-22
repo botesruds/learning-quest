@@ -6,7 +6,9 @@
      Right: a star strike blasts the demons and patches the most damaged wall. Wrong: a wall cracks (a weak spot, fixed tomorrow
      with 2 right answers on that topic). Wrong answers always show the reason.
    - 6 runes a night: today's 4 Brain check questions (3 right earns the third star, the same pass mark as Algebra Quest)
-     and 2 quick questions on today's topic. The fort can't be lost: demons that reach the keep just bump it and vanish. */
+     and 2 patrol runes: quick questions from earlier days he has mastered, placed at random (interleaving). Before a
+     patrol rune he first picks which day's idea it needs ("Which idea is this?"); a right pick earns a crystal.
+     Patrol runes never count towards the third star. With no mastered days yet, they are quick questions on today. The fort can't be lost: demons that reach the keep just bump it and vanish. */
 import { THREE, block, reducedMotion, isTouch } from "./gfx.js";
 import { makeDemon, makeLord } from "./models.js";
 import { PIECES } from "./pieces.js";
@@ -76,15 +78,45 @@ export function createNight({ stage, fx, fort, island, save, prog, ui, toast, on
     const tp = prog.topic(key); if (!tp) return;
     stop(true);
     const checks = shuffle(tp.t.checks || []).slice(0, 4);
-    const quick = (tp.t.gen || []).length ? [0, 1].map(() => pick(tp.t.gen)()) : [];
-    // runes: quick, brain, brain, quick, brain, brain
-    const runes = []; const qs = quick.slice(), cs = checks.slice();
-    [["q"], ["b"], ["b"], ["q"], ["b"], ["b"]].forEach(([t]) => { if (t === "q" && qs.length) runes.push({ type: "quick", obj: qs.shift(), key }); else if (cs.length) runes.push({ type: "brain", obj: cs.shift(), key }); else if (qs.length) runes.push({ type: "quick", obj: qs.shift(), key }); });
+    // patrol runes: 2 earlier mastered days (an easily confused day first, when the pack names one), else today
+    const pat = patrolDays(key, 2);
+    const quick = pat.length ? pat.map(k => ({ type: "quick", obj: pick(prog.topic(k).t.gen)(), key: k, patrol: true }))
+      : (tp.t.gen || []).length ? [0, 1].map(() => ({ type: "quick", obj: pick(tp.t.gen)(), key })) : [];
+    // the 4 Brain check runes, with the 2 quick runes at random places among them (never first, never side by side)
+    const runes = checks.map(c => ({ type: "brain", obj: c, key }));
+    const spots = shuffle([1, 2, 3, 4]).slice(0, quick.length).sort((a, b) => a - b); if (spots[1] - spots[0] === 1) spots[1] = Math.min(spots[1] + 1, runes.length + 1);
+    quick.forEach((q, i) => runes.splice(Math.min(spots[i] + i, runes.length), 0, q));
     const strength = 1 + prog.dayNo(key) * 0.05;
     N = { key, tp, runes, seg: -1, segT: 0, spawnQ: [], demons: [], shots: [], fx: [], time: 0, frozen: false, rune: null, runeReady: false, runeDone: true,
       brain: { right: 0, total: checks.length }, kills: 0, bumps: 0, gold: 0, crystal: 0, cracks: [], strength, wave: 0, look: tp.region ? (tp.region.look || tp.region.n) : 1 };
     begin();
     toast(`Night falls. Defend your fort! Tap each ✨ rune when it appears.`);
+  }
+
+  /* ---------- interleaving helpers ---------- */
+  const roadKeys = () => prog.road.filter(n => n.t === "level").map(n => n.key);
+  const usable = k => { const t = prog.topic(k); return t && t.t.gen && t.t.gen.length && !t.t.kind; };
+  /* earlier days he has mastered, for patrol runes: a day the pack marks as easily confused with today's first, then recent days */
+  function patrolDays(key, n) {
+    const ks = roadKeys(), i = ks.indexOf(key); if (i <= 0) return [];
+    const done = ks.slice(0, i).filter(k => prog.stars(k) >= 3 && usable(k)); if (!done.length) return [];
+    const tp = prog.topic(key), conf = ((tp.pack.confusable || {})[tp.t.id] || []).map(id => prog.keyOf(tp.pack, id)).filter(k => done.includes(k));
+    const out = []; if (conf.length) out.push(pick(conf));
+    const recent = shuffle(done.slice(-5)).filter(k => !out.includes(k)), older = shuffle(done.slice(0, -5)).filter(k => !out.includes(k));
+    while (out.length < n && (recent.length || older.length)) out.push((Math.random() < 0.7 && recent.length) || !older.length ? recent.shift() : older.shift());
+    return out.slice(0, n);
+  }
+  /* a list of n day keys, shuffled so the same day never comes twice in a row and the order can't be predicted */
+  function mixKeys(keys, n) {
+    if (!keys.length) return [];
+    let bag = []; while (bag.length < n) bag.push(...shuffle(keys)); bag = bag.slice(0, n);
+    for (let tries = 0; tries < 60; tries++) { bag = shuffle(bag); if (keys.length < 2 || bag.every((k, i) => !i || k !== bag[i - 1])) break; }
+    return bag;
+  }
+  /* "Which idea is this?": tiles for the right day plus up to 3 other days he knows */
+  function ideaTiles(key, pool) {
+    const others = shuffle(pool.filter(k => k !== key)).slice(0, 3);
+    return shuffle([key, ...others]).map(k => ({ k, label: `Day ${prog.dayNo(k)}: ${prog.topic(k).t.short}` }));
   }
 
   /* ---------- a demon lord's siege: the world boss, with Algebra Quest's rules ----------
@@ -97,14 +129,21 @@ export function createNight({ stage, fx, fort, island, save, prog, ui, toast, on
     const T = id => prog.topic(prog.keyOf(pack, id));
     if (fin) (R.final.topics || []).forEach(id => { const tp = T(id); if (tp && tp.t.gen && tp.t.gen.length) items.push({ type: "quick", obj: pick(tp.t.gen)(), key: tp.key }); });
     else {
-      const ids = R.topics.filter(id => T(id) && T(id).t.gen && T(id).t.gen.length), sh = shuffle(ids);
-      for (let i = 0; i < (lord.questions || 8); i++) { const tp = T(sh[i % sh.length]); items.push({ type: "quick", obj: pick(tp.t.gen)(), key: tp.key }); }
+      // interleaving: fully shuffled, never the same day twice in a row; 2 of the questions come from earlier lands
+      // he has beaten (spaced review), the rest from this land
+      const here = R.topics.map(id => prog.keyOf(pack, id)).filter(usable), nq = lord.questions || 8;
+      const earlier = prog.road.filter(n => n.t === "level" && n.pack === pack && n.region !== R && n.region.n < R.n && prog.stars(n.key) >= 3 && usable(n.key)).map(n => n.key);
+      const nOld = earlier.length ? Math.min(2, nq - here.length) : 0;
+      let keys = mixKeys(here, nq - nOld).concat(shuffle(earlier).slice(0, nOld));
+      for (let tries = 0; tries < 60; tries++) { keys = shuffle(keys); if (keys.every((k, i) => !i || k !== keys[i - 1])) break; }
+      keys.forEach(k => items.push({ type: "quick", obj: pick(prog.topic(k).t.gen)(), key: k, mixed: true, pool: here.concat(earlier) }));
       const ck = shuffle(R.topics.flatMap(id => (T(id) && T(id).t.checks || []).map(c => ({ c, key: T(id).key })))).slice(0, lord.checks ?? 2);
-      // the why-questions come 3rd and 7th, so the night mixes thinking and doing
-      ck.forEach((x, i) => items.splice(i ? 6 : 2, 0, { type: "brain", obj: x.c, key: x.key }));
+      // the why-questions go in at random places (never first, never side by side), so the order can't be predicted
+      const at = shuffle([2, 3, 4, 5, 6, 7]).slice(0, ck.length).sort((a, b) => a - b); if (at[1] - at[0] === 1) at[1]++;
+      ck.forEach((x, i) => items.splice(Math.min(at[i], items.length), 0, { type: "brain", obj: x.c, key: x.key }));
     }
     const need = lord.need || (fin ? 13 : 8);
-    N = { siege: true, fin, pack, region: R, lord, lordKey: fin ? "final" : prog.lordKey(pack, R), need, hits: 0, wrong: new Set(),
+    N = { siege: true, fin, pack, region: R, lord, lordKey: prog.bossKey(node), need, hits: 0, wrong: new Set(),
       key: items[0] && items[0].key, tp: { t: { short: cap(lord.name) } }, runes: items, seg: -1, segT: 0, spawnQ: [], demons: [], shots: [], fx: [], time: 0,
       frozen: false, rune: null, runeReady: false, runeDone: true, brain: { right: 0, total: items.filter(i => i.type === "brain").length },
       kills: 0, bumps: 0, gold: 0, crystal: 0, cracks: [], strength: fin ? 2.2 : 1.5 + (R.n || 1) * 0.15, wave: 0, look: R.look || R.n };
@@ -298,7 +337,7 @@ export function createNight({ stage, fx, fort, island, save, prog, ui, toast, on
     N.runeReady = false; N.runeObj.visible = false; N.frozen = true; sfx("freeze"); paintHud();
     const ov = h("div", { class: "freeze" });
     const card = h("div", { class: "runecard sheet", role: "dialog", "aria-label": "Rune question" });
-    const label = `✨ Rune ${N.seg + 1} of ${N.runes.length} · ${r.type === "brain" ? (N.siege ? "🧠 Why question" : "🧠 Brain check") : N.siege ? "⚔️ One try" : "⚡ Quick-fire"}`;
+    const label = `✨ Rune ${N.seg + 1} of ${N.runes.length} · ${r.type === "brain" ? (N.siege ? "🧠 Why question" : "🧠 Brain check") : N.siege ? "⚔️ One try" : r.patrol ? "🛡️ Patrol: an earlier day" : "⚡ Quick-fire"}`;
     let result = null;
     const resume = () => { ov.remove(); N.frozen = false; N.runeDone = true; N.after = 0; if (result === "right" || result === "half") strike(result === "half" ? 0.55 : 1); else fizzle(r.key); paintHud(); };
     if (r.type === "brain") {
@@ -314,6 +353,20 @@ export function createNight({ stage, fx, fort, island, save, prog, ui, toast, on
       } }, txt)));
       body.append(opts, fb, nx); card.append(body);
       window.__fdq = { type: "brain", obj: c };
+    } else if ((r.patrol || r.mixed) && !r.picked) {
+      /* "Which idea is this?": he names the day first, then answers. A right pick earns a crystal; a wrong one shows how to tell. */
+      const pool = r.patrol ? roadKeys().filter(k => prog.stars(k) >= 3 && usable(k)).concat(N.key) : r.pool;
+      const tiles = ideaTiles(r.key, [...new Set(pool)]), q = r.obj, body = h("div", { class: "card stack pop" }), fb = h("div");
+      body.append(h("div", { class: "eyebrow" }, label), h("div", { class: "qs" }, "🧭 Which idea is this?"), h("div", { class: "qs small", html: q.q }));
+      if (q.v) body.append(q.v());
+      const go = h("button", { class: "btn primary hide", type: "button", onclick: () => { r.picked = true; ov.remove(); N.frozen = false; N.runeReady = true; tapRune(); } }, "Now answer it ▸");
+      const opts = h("div", { class: "opts col ideas" }, ...tiles.map(t => h("button", { class: "opt", type: "button", "data-k": t.k, onclick: e => {
+        opts.querySelectorAll("button").forEach(b => (b.disabled = true)); const ok = t.k === r.key; e.currentTarget.classList.add(ok ? "ok" : "no"); opts.querySelector(`[data-k="${r.key}"]`).classList.add("ok");
+        if (ok) { S().mats.crystal = (S().mats.crystal || 0) + 1; N.crystal++; save.commit(); sfx("correct"); fb.className = "verdict good"; fb.innerHTML = "<b>Yes! +1 💎</b> Knowing which idea to use is half the battle."; }
+        else { sfx("wrong"); const T0 = prog.topic(r.key).t; fb.className = "verdict mid"; fb.innerHTML = `<b>This one is Day ${prog.dayNo(r.key)}: ${esc(T0.short)}.</b> ${esc(T0.title)}. Now answer it.`; }
+        go.classList.remove("hide"); setTimeout(() => go.focus({ preventScroll: true }), 50); } }, t.label)));
+      body.append(opts, fb, go); card.append(body); window.__fdq = { type: "pick", obj: { ans: r.key, q } };
+      ov.append(card); document.body.append(ov); return;
     } else if (N.siege) {
       // a siege question gets one try, like Algebra Quest's boss fights
       const q = r.obj; window.__fdq = { type: "own", obj: q };
@@ -373,7 +426,7 @@ export function createNight({ stage, fx, fort, island, save, prog, ui, toast, on
   function finishSiege() {
     const won = N.hits >= N.need, prev = S().bosses[N.lordKey] || {};
     S().bosses[N.lordKey] = { won: !!prev.won || won, best: Math.max(prev.best || 0, N.hits), t: Date.now() };
-    if (N.fin) { S().exams = S().exams || []; S().exams.push({ t: Date.now(), score: N.hits, total: N.runes.length, wrong: [...N.wrong] }); }
+    if (N.fin) { S().exams = S().exams || []; S().exams.push({ t: Date.now(), pack: N.pack.id, score: N.hits, total: N.runes.length, wrong: [...N.wrong] }); }
     const r = { siege: true, fin: N.fin, won, lord: N.lord, region: N.region, pack: N.pack, hits: N.hits, need: N.need, total: N.runes.length, wrong: [...N.wrong],
       kills: N.kills, bumps: N.bumps, gold: N.gold + (won ? (N.fin ? 300 : 100) : 0), crystal: N.crystal, cracks: N.cracks.slice() };
     S().gold += r.gold;

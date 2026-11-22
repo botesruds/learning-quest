@@ -7,6 +7,12 @@ export const REGION_LOOK = {
   3: { name: "Pattern Peaks", grass: 0xeef4fb, grass2: 0xdfe9f4, dirt: 0x7f879c, sand: 0xc9d6e4, water: 0x4c8fca, leaf: [0x2e7d5b, 0x3b8f6c, 0x256b4c], snow: true },
   4: { name: "Robot Factory", grass: 0xc8a96a, grass2: 0xb8995b, dirt: 0x6b4a32, sand: 0xe2c78e, water: 0x3a7ca5, leaf: [0xc98f3a, 0xa8733a, 0xdcae52] },
   5: { name: "Final Castle", grass: 0x5d4b4b, grass2: 0x4f3f40, dirt: 0x2b2127, sand: 0x6c5a52, water: 0xff6a1f, leaf: [0x7a4b3a, 0x5e3a2f, 0x8c3b2a], lava: true },
+  // science lands (Unit 2: How are we organised?)
+  6: { name: "Cell City", grass: 0x8fdc6a, grass2: 0x7acb58, dirt: 0x6e8f3e, sand: 0xe8f0a8, water: 0x3fd0c9, leaf: [0x3fbf7f, 0x7ad957, 0x2fa38a] },
+  7: { name: "Body Builders", grass: 0xd6c9a0, grass2: 0xc8b98c, dirt: 0x8c6a4a, sand: 0xf3ead2, water: 0x5aa6d6, leaf: [0xe0a33c, 0xc9862f, 0xd8b44a] },
+  8: { name: "Muscle Mountain", grass: 0xd98b5f, grass2: 0xc97a50, dirt: 0x7a3f2a, sand: 0xf0c49a, water: 0x2f86b8, leaf: [0x8c3b2a, 0xb5532f, 0x6f8f3a] },
+  9: { name: "Investigation Lab", grass: 0x9fb8c9, grass2: 0x8ea8ba, dirt: 0x55606e, sand: 0xdfe8ef, water: 0x2fb7e6, leaf: [0x5c6bc0, 0x7986cb, 0x3f51b5] },
+  10: { name: "Brain Citadel", grass: 0x6a4f7a, grass2: 0x5b4369, dirt: 0x2f2440, sand: 0x8c7aa0, water: 0xff5fae, leaf: [0xc06bd6, 0x9b4fb8, 0xe08ad6], lava: true, glow: 0xff2f8a },
 };
 /* each region's demons wear their own colours (troll-lings, frost sprites, wind-up gremlins, lava imps) */
 export const REGION_DEMON = {
@@ -14,6 +20,11 @@ export const REGION_DEMON = {
   3: { imp: { body: 0x7fc8f8, belly: 0xffffff, horn: 0xe8f7ff }, bat: { body: 0x4f7fb8, belly: 0xbfe3ff, horn: 0xffffff } },
   4: { imp: { body: 0xd99a3a, belly: 0xf6d27a, horn: 0x8a8f99 }, bat: { body: 0x6f6a72, belly: 0xc9a14a, horn: 0xffd23f } },
   5: { imp: { body: 0xe2452e, belly: 0xffb347, horn: 0x2b2127 }, bat: { body: 0x4a2a2a, belly: 0xff7a3a, horn: 0xffd23f } },
+  6: { imp: { body: 0x7ed957, belly: 0xd4f7a6, horn: 0xff7eb6 }, bat: { body: 0x2fa38a, belly: 0x9ff3df, horn: 0xffd23f } },   // germ blobs
+  7: { imp: { body: 0x9aa3ad, belly: 0xf3ead2, horn: 0x5b3417 }, bat: { body: 0x6d5a4a, belly: 0xe0d2b8, horn: 0xffffff } },
+  8: { imp: { body: 0xd2382b, belly: 0xffb38a, horn: 0xffffff }, bat: { body: 0x8c3b2a, belly: 0xf0a37a, horn: 0xffd23f } },
+  9: { imp: { body: 0x5c6bc0, belly: 0xc5cae9, horn: 0x7ff0ff }, bat: { body: 0x37474f, belly: 0x90a4ae, horn: 0x7ff0ff } },
+  10: { imp: { body: 0x9b4fb8, belly: 0xffb3e0, horn: 0x7cf3ff }, bat: { body: 0x4a2a5a, belly: 0xff5fae, horn: 0xffd23f } },
 };
 
 /* ---------- island of chunky columns ---------- */
@@ -111,6 +122,11 @@ export function makeKeep(style = "wood") {
     3: { wall: 0xdff1ff, trim: 0x8fc0e8, roof: 0x6fb7ff, stone: 0xa9d0f2 },
     4: { wall: 0xc9a14a, trim: 0x6b6f78, roof: 0x8a5a2e, stone: 0x9c7a35 },
     5: { wall: 0x4a4352, trim: 0xffc83d, roof: 0xe2452e, stone: 0x2b2127 },
+    6: { wall: 0xf3fff0, trim: 0x3fbf7f, roof: 0xff7eb6, stone: 0x9ad7a6 },
+    7: { wall: 0xf3ead2, trim: 0xbfa576, roof: 0xd2382b, stone: 0xd8ccb0 },
+    8: { wall: 0xe0a07a, trim: 0x8c3b2a, roof: 0xd2382b, stone: 0xb5734f },
+    9: { wall: 0xdfe8ef, trim: 0x5c6bc0, roof: 0x2fb7e6, stone: 0x90a4ae },
+    10: { wall: 0x4a2a5a, trim: 0x7cf3ff, roof: 0xff5fae, stone: 0x2f2440 },
   }[style === 1 ? "wood" : style] || { wall: 0xc0894f, trim: 0x8a5a2e, roof: 0xd9473b, stone: 0xa9b1bb };
   const g = new THREE.Group();
   g.add(block(3.6, 0.6, 3.6, S.stone, 0, 0, 0, { r: 0.12 }));                 // stone footing
@@ -229,5 +245,9 @@ export const LORDS = {
   2: { body: 0x4f8f3a, belly: 0xa7cf7a, horn: 0xefe3c0, size: 2.8, heavy: true, crown: true },                          // the Bridge Troll
   3: { body: 0xf4f8ff, belly: 0xcfe6ff, horn: 0x8fc8ff, glow: 0x3aa0ff, size: 2.8, heavy: true },                       // the Pattern Yeti
   5: { body: 0xd2382b, belly: 0xffb347, horn: 0xffd23f, glow: 0xffe066, size: 3.2, heavy: true, wings: true, wingCol: 0x8c1f1a, crown: true },  // the Algebra Dragon
+  6: { body: 0x7ed957, belly: 0xe8ffb8, horn: 0xff7eb6, glow: 0xfff36a, size: 2.8, heavy: true },                       // the Blob King, a giant germ
+  7: { body: 0xe8e0c8, belly: 0xffffff, horn: 0x6d5a4a, glow: 0xff5a5a, size: 2.8, heavy: true, crown: true },          // the Bone Breaker
+  8: { body: 0xc0392b, belly: 0xffb38a, horn: 0xffe0b0, size: 3.0, heavy: true },                                       // the Cramp Colossus
+  10: { body: 0x7b3fa0, belly: 0xff9ad5, horn: 0x7cf3ff, glow: 0x7cf3ff, size: 3.2, heavy: true, wings: true, wingCol: 0x4a2a5a, crown: true },  // the Great Germ
 };
 export function makeLord(region) { return makeDemon("imp", region, LORDS[region] || LORDS[1]); }
