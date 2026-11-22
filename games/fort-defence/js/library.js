@@ -146,7 +146,7 @@ export function createLibrary({ save, prog, day, toast, onChange }) {
         h("span", { class: "z" }, String(no)), h("span", { class: "nm" }, d.title), h("span", { class: "kind" }, dn ? "✓ read" : op ? "new" : "locked")); });
     const kit = learned();
     K.set(h("div", { class: "stack" },
-      h("div", { class: "mission" }, "📚 Good readers use strategies. Learn one on each floor, then use them on dispatches about your science days. Reading here never blocks a science day."),
+      h("div", { class: "mission" }, "📚 Good readers use strategies. Learn one on each floor, then use them on dispatches about your science days. Reading never blocks a science day, but each demon lord waits until that land's dispatches are read."),
       next,
       h("section", { class: "qregion" }, h("h3", {}, "🏰 The six floors"), h("div", { class: "qtiles" }, ...floors)),
       h("section", { class: "qregion" }, h("h3", {}, "📜 Dispatches"), h("p", { class: "small muted" }, "A dispatch opens when you finish that day's science lesson."), h("div", { class: "qtiles" }, ...reads)),
