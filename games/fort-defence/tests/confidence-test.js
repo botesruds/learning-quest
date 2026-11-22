@@ -30,7 +30,7 @@ const ANSWER=`(function(spec, root, wrong){
  p.on('pageerror',e=>errs.push('PAGEERR '+e.message)); p.on('console',m=>{ if(m.type()==='error') errs.push(m.text()); });
  await p.goto('http://localhost:8861/games/fort-defence/?practice&lowgfx&subject=science'); await p.waitForSelector('.logo',{timeout:30000});
  await p.click('.btn.pulse'); await p.waitForSelector('.dawn .go-day');
- await p.evaluate(()=>{ const S=__fd.save.state; for(let i=1;i<=12;i++){ S.lv['sci2:'+i]={stars:i<10?3:2,train:true}; S.learnDone['sci2:'+i]=true; } ['sci2:1','sci2:2'].forEach(k=>S.bosses[k]={won:true,best:9}); __fd.save.commit(); });
+ await p.evaluate(()=>{ const S=__fd.save.state; S.lib=S.lib||{fl:{},rd:{}}; S.lib.rd=S.lib.rd||{}; S.wr=S.wr||{fl:{},rp:{},desk:[]}; S.wr.rp=S.wr.rp||{}; for(let i=1;i<=13;i++){ S.lib.rd['sci2:'+i]={done:true}; S.wr.rp['sci2:'+i]={done:true}; } for(let i=1;i<=12;i++){ S.lv['sci2:'+i]={stars:i<10?3:2,train:true}; S.learnDone['sci2:'+i]=true; } ['sci2:1','sci2:2'].forEach(k=>S.bosses[k]={won:true,best:9}); __fd.save.commit(); });
  // 1. rune lists
  const shape=await p.evaluate(()=>{ const node=__fd.prog.road.find(n=>n.t==='lord'&&n.region.n===3), out={fights:0,one:0,first:0,lens:new Set(),cmds:new Set()};
    for(let n=0;n<30;n++){ __fd.night.startSiege(node); const R=__fd.night.state.runes; __fd.night.stop(true); out.fights++;
