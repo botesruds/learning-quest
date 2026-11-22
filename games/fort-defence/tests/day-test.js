@@ -54,7 +54,8 @@ const ANSWER=`(function(spec, root, wrong){
  // ---- quest map ----
  await p.click('text=📜 Quest map'); await p.waitForSelector('.qtile'); await p.screenshot({path:'st4-map.png'});
  log('9 map tile 1:', await p.locator('.qtile').nth(1).textContent(), '| tile 6 locked:', await p.locator('.qtile').nth(6).evaluate(e=>e.classList.contains('locked')));
- await p.locator('.qtile').nth(6).click(); log('   locked tap toast:', await p.locator('.toast').last().textContent());
+ await p.locator('.qtile').nth(6).click(); await p.waitForSelector('.sheet .peek'); log('   locked tap opens peek:', await p.locator('.sheet .eyebrow').first().textContent());
+ await p.evaluate(()=>__fd.day.openMap()); await p.waitForSelector('.qtile.chest');
  // ---- scout report ----
  const g0=await p.evaluate(()=>__fd.save.state.gold); await p.locator('.qtile.chest').first().click(); await p.waitForSelector('.sheet .chunk');
  const prev=await p.evaluate(()=>__fd.prog.road[0].pack.previews[1].cards.map(c=>c.t==='try'?{choices:c.q.choices,ans:c.q.ans,a:c.q.a}:null));

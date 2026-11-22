@@ -12,7 +12,7 @@ export const blank = () => ({
   v: 1, updated: 0, backupAt: 0, seededFrom: null, startedAt: 0,
   // learning progress (same meaning as Algebra Quest, so the mastery rules carry over unchanged)
   hist: {}, learned: {}, learnDone: {}, checks: {}, lv: {}, bosses: {}, repair: {}, exams: [],
-  chests: {}, classNow: {}, unlockAll: false, badges: {}, days: [], last: {},
+  chests: {}, peeked: {}, classNow: {}, unlockAll: false, badges: {}, days: [], last: {},
   // fort game
   gold: 0, hero: "knight", owned: ["knight"],
   mats: { wood: 0, stone: 0, iron: 0, crystal: 0 },
