@@ -102,20 +102,23 @@ export function createStage(canvas) {
 
   const updaters = new Set();
   const clock = new THREE.Clock();
-  let fps = 60, frames = 0, acc = 0, running = true;
+  let fps = 60, frames = 0, acc = 0, running = true, paused = false, looping = false;
   function loop() {
-    if (!running) return;
-    requestAnimationFrame(loop);
+    if (!running || paused) { looping = false; return; }
+    looping = true; requestAnimationFrame(loop);
     const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
     frames++; acc += dt; if (acc > 0.5) { fps = frames / acc; frames = 0; acc = 0; }
     updaters.forEach(fn => fn(dt, t));
     applyCamera(dt);
     renderer.render(scene, camera);
   }
-  document.addEventListener("visibilitychange", () => { if (document.hidden) running = false; else if (!running) { running = true; clock.getDelta(); loop(); } });
+  const wake = () => { if (running && !paused && !looping) { clock.getDelta(); loop(); } };
+  document.addEventListener("visibilitychange", () => { running = !document.hidden; wake(); });
+  /* pause(true) stops drawing (another full-screen view, like the valley, is showing); pause(false) carries on */
+  function pause(on) { paused = !!on; wake(); }
   loop();
 
-  return { renderer, scene, camera, sun, hemi, rig, setMood, shake, flyTo, resize, setShift, onFrame: fn => (updaters.add(fn), () => updaters.delete(fn)), get fps() { return fps; } };
+  return { renderer, scene, camera, sun, hemi, rig, setMood, shake, flyTo, resize, setShift, pause, get paused() { return paused; }, onFrame: fn => (updaters.add(fn), () => updaters.delete(fn)), get fps() { return fps; } };
 }
 
 /* ---------- particles: pooled little cubes (dust, sparkles, confetti, demon pops) ---------- */

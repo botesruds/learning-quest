@@ -13,5 +13,10 @@ window.CATALOG=[
   { subject:"Science", emoji:"🔬", color:"var(--c2)", games:[
     { id:"fort-defence", title:"Fort Defence: Science", icon:"🦠", path:"games/fort-defence/?subject=science",
       blurb:"Unit 2, How are we organised? Cells, bones and muscles. Same fort, new lands." }
+  ]},
+  // not a game of its own: opens the valley that Fort Defence builds from everything mastered (cta = the button's word)
+  { subject:"My Valley", emoji:"🏡", color:"var(--c3)", games:[
+    { id:"fort-defence", title:"My Valley", icon:"🏡", path:"games/fort-defence/?valley", cta:"Visit", extra:true,
+      blurb:"Everything you master, in every subject, builds something here. Come and see it grow." }
   ]}
 ];
