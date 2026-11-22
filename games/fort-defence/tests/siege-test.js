@@ -22,7 +22,7 @@ const log=(...a)=>console.log(...a);
    await wf(()=>document.querySelector('.sheet .celebrate h1'),null,120000); if(shots){ await p.waitForTimeout(800); await p.screenshot({path:shots+'-morning.png'}); }
    return seen.join(' ')+' | '+await p.locator('.sheet .celebrate h1').textContent(); };
  await p.goto('http://localhost:8845/games/fort-defence/?practice&lowgfx'); await p.waitForSelector('.logo',{timeout:30000});
- await p.evaluate(()=>{ const S=__fd.save.state; for(let i=1;i<=8;i++){ S.lv[String(i)]={stars:3,train:true}; S.learnDone[String(i)]=true; } S.chests['1']=true; __fd.save.commit(); });
+ await p.evaluate(()=>{ const S=__fd.save.state; for(let i=1;i<=8;i++){ S.lv[String(i)]={stars:3,train:true}; S.learnDone[String(i)]=true; } S.chests['1']=true; S.cardsV=1; __fd.save.commit(); });   // cardsV: new review cards start tomorrow, so no dawn patrol gets in the way
  await p.click('.btn.pulse'); await p.waitForSelector('.dawn .go-day'); await p.evaluate(()=>__fd.demoFort());
  log('1 dawn:', await p.locator('.go-day').textContent(), '|', await p.locator('.dsub').textContent());
  // lose: 3 misses
