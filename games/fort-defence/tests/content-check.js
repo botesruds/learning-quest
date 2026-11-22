@@ -10,6 +10,7 @@ const ARGS={args:['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ign
   const selfCheck=(spec,where)=>{ if(spec.choice){ if(!(spec.ans>=0&&spec.ans<spec.choice.length)) F(where+' bad choice index'); if(new Set(spec.choice).size!==spec.choice.length) F(where+' duplicate choices '+JSON.stringify(spec.choice)); return; }
     if(spec.tap){ const pic=spec.tap.pic(); if(!pic.querySelector('[data-part="'+spec.tap.ans+'"]')) F(where+' picture has no part '+spec.tap.ans); return; }
     if(spec.sort){ const S=spec.sort; if(!S.bins||S.bins.length<2||!S.items.length||S.items.some(([t,b])=>!t||!(b>=0&&b<S.bins.length))) F(where+' bad sort'); return; }
+    if(spec.gap){ const G=spec.gap; if(G.text.split('___').length-1!==G.ans.length) F(where+' gap count'); G.ans.forEach(a=>{ if(!G.bank.includes(a)) F(where+' gap answer not in bank '+a); }); return; }
     if(spec.order){ if(!(spec.order.length>=2)||new Set(spec.order).size!==spec.order.length) F(where+' bad order'); return; }
     const vals='num' in spec?[String(spec.num),C.N(spec.num)]:'expr' in spec?[spec.expr]:'words' in spec?[spec.words[0]]:null; if(!vals){ F(where+' unknown spec '+JSON.stringify(spec)); return; }
     vals.forEach(v=>{ const res=C.checkAns(spec,v); if(!res.ok) F(where+' rejects its own answer '+v+' '+JSON.stringify(spec)+' '+(res.msg||'')); }); };
@@ -39,6 +40,17 @@ const ARGS={args:['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ign
      else { if(!(q.choice&&q.choice.length>=2)||new Set(q.choice).size!==q.choice.length) F(w+' choices'); }
      if(q.clue!=null&&!(q.clue>=0&&q.clue<n)) F(w+' clue index'); out.reads=(out.reads||0)+1; };
    ((pack.reading||{}).dispatches||[]).forEach(d=>{ if(!pack.topics.find(t=>t.id===d.day)) F('dispatch for missing day '+d.day); d.qs.forEach((q,i)=>RQ('dispatch '+d.day+' q'+i,d,q)); });
+   // thinking tasks: SPW picks are in the day's dispatch, every Explain model passes its own keyword check, maps are complete
+   if(pack.think){ const TH=await import('/games/fort-defence/js/think.js'); const th=pack.think;
+     Object.entries(th.spw||{}).forEach(([day,sp])=>{ const d=((pack.reading||{}).dispatches||[]).find(x=>String(x.day)===day); if(!d){ F('spw '+day+' has no dispatch'); return; }
+       if(!sp.best.every(i=>i>=0&&i<d.text.length)) F('spw '+day+' sentence index'); const all=d.text.join(' ').toLowerCase();
+       if(!d.text[sp.best[0]].toLowerCase().includes(sp.phrase.toLowerCase())) F('spw '+day+' phrase not in expert sentence'); if(!all.includes(sp.word.toLowerCase())) F('spw '+day+' word not in text'); out.spw=(out.spw||0)+1; });
+     Object.entries(th.explain||{}).forEach(([day,E])=>{ if(!pack.topics.find(t=>String(t.id)===day)) F('explain for missing day '+day); const own=E.model.slice(E.starter.length); if(!E.model.startsWith(E.starter)) F('explain '+day+' model must start with the starter');
+       const miss=TH.missingIdeas(E,own); if(miss.length) F('explain '+day+' model misses '+miss.map(m=>m.hint).join(' / ')); const bare=TH.missingIdeas(E,'I do not know'); if(bare.length<E.must.length) F('explain '+day+' a blank answer passes an idea'); out.explain=(out.explain||0)+1; });
+     Object.entries(th.maps||{}).forEach(([rn,m])=>{ if(!pack.regions.find(r=>String(r.n)===rn)) F('map for missing region '+rn); if(m.branches.length<3||m.branches.length>8) F('map '+rn+' branch count'); const cards=m.branches.flatMap(b=>b.cards); if(new Set(cards).size!==cards.length) F('map '+rn+' duplicate card');
+       Object.keys(m.also||{}).forEach(c=>{ if(!cards.includes(c)) F('map '+rn+' also names a missing card '+c); }); if(!cards.includes(m.cross.from)||!m.branches[m.cross.to]) F('map '+rn+' cross-link'); out.maps=(out.maps||0)+1; });
+     Object.entries(th.gaps||{}).forEach(([day,gs])=>gs.forEach((G,i)=>{ if(G.text.split('___').length-1!==G.ans.length||G.ans.some(a=>!G.bank.includes(a))||new Set(G.bank).size!==G.bank.length) F('gap '+day+'.'+i); }));
+   }
    // every topic on the road exists
    pack.regions.forEach(rg=>rg.topics.forEach(id=>{ if(!pack.topics.find(t=>t.id===id)) F('region '+rg.n+' lists missing topic '+id); }));
   }

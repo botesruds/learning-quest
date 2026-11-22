@@ -8,6 +8,7 @@ import { MATS, PIECES } from "./pieces.js";
 import { HEROES, PETS, makeHero, makePet } from "./models.js";
 import { objThumb } from "./thumbs.js";
 import { STRATEGIES } from "../packs/reading/strategies.js";
+import { SPWView, thinkState } from "./think.js";
 
 /* what each kind of answer earns (see the design document) */
 export const LOOT = {
@@ -25,6 +26,7 @@ const peek = (type, obj) => { window.__fdq = { type, obj }; };   // lets the aut
 
 export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, onChange, onNight, onFixCrack, onFixTopic, onHero, onVisit }) {
   const S = () => save.state;
+  window.__fdGapTyped = k => prog.stars(k) >= 3;   // fill-the-gap questions are typed once the day is mastered
   let sheet = null, body = null, lootbar = null, ctx = null;
 
   /* ---------- the sheet ---------- */
@@ -132,10 +134,20 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
     const T = prog.topic(key).t, first = !S().learnDone[key];
     set(h("div", { class: "stack" },
       mission(T.big ? "🌟 Scout's briefing: a big idea. Everything later is built on this, so take your time." : "📜 Scout's briefing: read each card. Answer the question on the card to move on."),
-      LearnView(T.learn, i, j => learn(key, j, back), () => { S().learnDone[key] = true; save.commit(); open(key, { ph: back || undefined }); },
+      LearnView(T.learn, i, j => learn(key, j, back), () => { S().learnDone[key] = true; save.commit(); if (thinkThrough(key, () => open(key, { ph: back || undefined }))) return; open(key, { ph: back || undefined }); },
         j => { S().learned[key] = Math.max(S().learned[key] || 0, j); save.commit(); },
         back ? "Back to the " + (back === "brain" ? "Brain check" : back === "challenge" ? "Challenge" : "day") : "Start gathering",
         (ok, tries, card) => { if (ok && first) grant(LOOT.learnTry, card); })));
+  }
+
+  /* Sentence, Phrase, Word on the day's Library dispatch: once per day, the next time he finishes the lesson (bonus only) */
+  function thinkThrough(key, then) {
+    const tp = prog.topic(key), th = tp.pack.think, spw = th && th.spw && th.spw[tp.t.id];
+    const item = spw && tp.pack.reading && (tp.pack.reading.dispatches || []).find(d => d.day === tp.t.id);
+    if (!item || thinkState(S()).spw[key]) return false;
+    peek("spw", { spw, item });
+    set(SPWView(item, spw, save, key, r => { grant(r.expert ? { crystal: 1, wood: 1 } : { wood: 2 }, body); then(); }));
+    return true;
   }
 
   function train(key, count) {
@@ -282,8 +294,10 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
     set(celebrate(h("div", { class: "bigstars" }, "⭐⭐⭐"), h("h2", {}, "Mastered!"), h("p", {}, "Play again to gather more loot, or read the briefing again."),
       bigbtn(prog.topic(key).t.kind === "invest" ? "🕵️ New investigation" : "⚔️ Gathering run for loot", () => open(key, { ph: prog.topic(key).t.kind === "invest" ? "invest" : "challenge", replay: true })),
       bigbtn("📜 Read the briefing again", () => open(key, { ph: "learn", i: 0 }), "plain"),
+      thinkReady(key) ? bigbtn("🧠 Think it through: sentence, phrase, word", () => thinkThrough(key, () => open(key)), "plain") : null,
       linkbtn("Back to the fort", () => close("x"))));
   }
+  function thinkReady(key) { const tp = prog.topic(key), th = tp.pack.think; return !!(th && th.spw && th.spw[tp.t.id] && !thinkState(S()).spw[key] && tp.pack.reading); }
 
   /* ---------- a day is won ---------- */
   function complete(key) {
