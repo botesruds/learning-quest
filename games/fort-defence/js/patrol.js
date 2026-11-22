@@ -6,7 +6,7 @@
    - Practise one idea (from the report card): the rule card first, then each of that idea's cards.
    - Armoury: every card as a weapon, its metal showing its box, dented ones tagged for repair. */
 import { h, H, shuffle, pick, esc } from "./qcore.js";
-import { QuestionCard, UnderstandCard } from "./qui.js";
+import { QuestionCard, UnderstandCard, attachConfidence, confNote } from "./qui.js";
 import { sfx } from "./audio.js";
 import { LOOT } from "./day.js";
 import { METALS } from "./cards.js";
@@ -53,9 +53,11 @@ export function createPatrol({ save, prog, cards, day, toast, onLeave }) {
       ask(id, d, head, retry);
     }
     function ask(id, d, head, retry) {
-      const v = version(d); let card;
+      const v = version(d); let card, cf = null;
       const done = res => {
-        const m = cards.answer(id, res, { retry, q: v.q ? v.q.q : v.u.q }); prog.record(d.key, res === "first" ? "own" : res === "second" ? "help" : res);
+        const conf = cf ? cf.lock() : null;
+        const m = cards.answer(id, res, { retry, q: v.q ? v.q.q : v.u.q, conf }); prog.record(d.key, res === "first" ? "own" : res === "second" ? "help" : res, { conf });
+        const note = confNote(conf, res !== "wrong", true); if (note && card) { const nb = card.querySelector(":scope > button.btn.primary"); nb ? card.insertBefore(note, nb) : card.append(note); }
         if (!retry) moves[id] = m;
         if (m.k === "right") k.grant(retry ? LOOT.help : LOOT.own, card); else if (m.k === "helped") k.grant(LOOT.help, card); else sfx("wrong");
         if (m.k === "wrong" && !retry && !again.includes(id)) again.push(id);
@@ -65,6 +67,7 @@ export function createPatrol({ save, prog, cards, day, toast, onLeave }) {
       const nx = () => { const m = moves[id]; i++; save_(); if (!retry && m && m.k === "wrong") reteach(d, next); else next(); };
       if (v.type === "own") { peek("own", v.q); card = QuestionCard(v.q, "own", done, nx); }
       else { peek("uq", v.u); card = UnderstandCard(v.u, done, nx, { nextLabel: "Next ▸", label: d.kind === "why" ? "🛡️ Why does it work?" : undefined }); }
+      cf = attachConfidence(card);
       k.set(h("div", { class: "stack" }, intro ? k.mission(intro) : null, progEl, head, card));
     }
     function pickIdea(id, d, head, then) {

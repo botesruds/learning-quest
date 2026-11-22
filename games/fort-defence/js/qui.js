@@ -222,4 +222,38 @@ function UnderstandCard(u, onResult, onNext, opts = {}) {
   return card;
 }
 
-export { TapAnswer, SortAnswer, OrderAnswer, LearnView, MiniQ, SymKeys, QuestionCard, AnswerBox, runSteps, runOwn, UnderstandCard, UQ_LABEL };
+
+/* ---------- confidence check: "How sure are you?" before answering ----------
+   One tap: sure / think so / guessing. A soft gate: the answers dim until he picks, but stay tappable,
+   so a question is never blocked. The choice goes with the answer (cards.answer / prog.record { conf }),
+   and confNote() turns choice + result into one plain sentence. */
+const CONF=[{k:"sure",e:"🛡️",n:"Sure"},{k:"think",e:"🤔",n:"Think so"},{k:"guess",e:"❓",n:"Guessing"}];
+function ConfidenceRow(target){
+  let v=null, locked=false;
+  const row=h("div",{class:"conf",role:"group","aria-label":"How sure are you?"},h("span",{class:"conf-q"},"How sure are you?"));
+  CONF.forEach(c=>row.append(h("button",{class:"conf-b",type:"button","data-conf":c.k,onclick:e=>{
+    if(locked) return; v=c.k; row.querySelectorAll(".conf-b").forEach(b=>b.classList.toggle("on",b===e.currentTarget));
+    row.classList.add("picked"); if(target) target.classList.remove("conf-wait"); }},c.e+" "+c.n)));
+  if(target) target.classList.add("conf-wait");
+  return { el:row, get:()=>v, lock:()=>{ if(locked) return v; locked=true; row.querySelectorAll(".conf-b").forEach(b=>(b.disabled=true)); if(target) target.classList.remove("conf-wait"); return v; } };
+}
+/* a confidence row inside an existing question card: above the answer area (QuestionCard),
+   or straight under the question (UnderstandCard and others) */
+function attachConfidence(card){
+  const stack=card.querySelector(":scope > .stack"), cf=ConfidenceRow(stack);
+  if(stack) card.insertBefore(cf.el,stack);
+  else { const qs=card.querySelector(":scope > .qs"); if(qs) qs.after(cf.el); else card.append(cf.el); }
+  return cf;
+}
+/* review = the question is a review card, so the "will it come back" line is true */
+function confNote(conf,right,review){
+  if(!conf) return null;
+  const T={
+    sure:  right? ["good","🛡️ Sure and right: rock solid."] : ["bad","😮 Sure, but wrong: a surprise! Surprises are the best ones to fix. Read the reason carefully."],
+    think: right? ["good","🤔 You thought so, and you were right. A little more practice makes it solid."] : ["mid","🤔 Close. Read the reason, then you'll know it next time."],
+    guess: right? ["mid", review? "🍀 A lucky guess! It won't move up a box until you really know it." : "🍀 A lucky guess! Read the reason so next time it isn't a guess."] : ["mid","❓ Good honest guess. Now you've seen the answer and the reason."],
+  }[conf]; if(!T) return null;
+  return h("div",{class:"confnote "+T[0]},T[1]);
+}
+
+export { ConfidenceRow, attachConfidence, confNote, TapAnswer, SortAnswer, OrderAnswer, LearnView, MiniQ, SymKeys, QuestionCard, AnswerBox, runSteps, runOwn, UnderstandCard, UQ_LABEL };
