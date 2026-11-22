@@ -14,7 +14,8 @@ import { makeDemon, makeLord } from "./models.js";
 import { PIECES } from "./pieces.js";
 import { h, pick, shuffle, esc, SayBtn } from "./qcore.js";
 import { ExplainCard } from "./think.js";
-import { QuestionCard, AnswerBox } from "./qui.js";
+import { QuestionCard, AnswerBox, ConfidenceRow, attachConfidence, confNote } from "./qui.js";
+import { COMMANDS } from "../packs/commands.js";
 import { sfx, playMusic } from "./audio.js";
 
 const BLOCKS = new Set(["wall", "gate", "arrow", "cannon", "house", "well", "statue", "torch", "banner", "bush"]);
@@ -147,6 +148,15 @@ export function createNight({ stage, fx, fort, island, save, prog, cards, ui, to
       // the why-questions go in at random places (never first, never side by side), so the order can't be predicted
       const at = shuffle([2, 3, 4, 5, 6, 7]).slice(0, ck.length).sort((a, b) => a - b); if (at[1] - at[0] === 1) at[1]++;
       ck.forEach((x, i) => items.splice(Math.min(at[i], items.length), 0, { type: "brain", obj: x.c, key: x.key }));
+      // one command-word rune ("which answer does what the command asks?") in place of a quick question, never first
+      // prefer a slot whose neighbours are different days, so taking out that question never puts one day twice in a row
+      const cmds = COMMANDS[pack.id] || [], all = items.map((it, i) => (i > 0 && it.type === "quick" ? i : -1)).filter(i => i > 0);
+      const safe = all.filter(i => { const qs = items.filter((it, k) => k !== i && it.type === "quick").map(it => it.key); return qs.every((k, x) => !x || k !== qs[x - 1]); });
+      const slots = safe.length ? safe : all;
+      if (cmds.length && slots.length) {
+        const c = pick(cmds), order = shuffle(c.c.map((_, i) => i)), j = pick(slots);
+        items[j] = { type: "brain", cmd: true, key: items[j].key, obj: { q: c.q, c: order.map(i => c.c[i]), a: order.indexOf(c.a), why: c.why, cmd: c.cmd } };
+      }
     }
     const need = lord.need || (fin ? 13 : 8);
     N = { siege: true, fin, pack, region: R, lord, lordKey: prog.bossKey(node), need, hits: 0, wrong: new Set(),
@@ -343,7 +353,7 @@ export function createNight({ stage, fx, fort, island, save, prog, cards, ui, to
     N.runeReady = false; N.runeObj.visible = false; N.frozen = true; sfx("freeze"); paintHud();
     const ov = h("div", { class: "freeze" });
     const card = h("div", { class: "runecard sheet", role: "dialog", "aria-label": "Rune question" });
-    const label = `✨ Rune ${N.seg + 1} of ${N.runes.length} · ${r.type === "brain" ? (N.siege ? "🧠 Why question" : "🧠 Brain check") : N.siege ? "⚔️ One try" : r.patrol ? "🛡️ Patrol: an earlier day" : "⚡ Quick-fire"}`;
+    const label = `✨ Rune ${N.seg + 1} of ${N.runes.length} · ${r.type === "brain" ? (r.cmd ? "🎯 Command word" : N.siege ? "🧠 Why question" : "🧠 Brain check") : N.siege ? "⚔️ One try" : r.patrol ? "🛡️ Patrol: an earlier day" : "⚡ Quick-fire"}`;
     let result = null;
     const resume = () => { ov.remove(); N.frozen = false; N.runeDone = true; N.after = 0; if (result === "right" || result === "half") strike(result === "half" ? 0.55 : 1); else fizzle(r.key); paintHud(); };
     if (r.type === "brain" && r.obj.explain) {
@@ -357,16 +367,19 @@ export function createNight({ stage, fx, fort, island, save, prog, cards, ui, to
       card.append(ec, nx); window.__fdq = { type: "explain", obj: r.obj.explain };
     } else if (r.type === "brain") {
       const c = r.obj, body = h("div", { class: "card stack pop" });
-      body.append(h("div", { class: "eyebrow" }, label), h("div", { class: "qs" }, c.q));
+      body.append(h("div", { class: "eyebrow" }, label), r.cmd ? h("div", { class: "qs", html: c.q + "<br><span class='small muted'>Which answer does what the command asks?</span>" }) : h("div", { class: "qs" }, c.q));
       const fb = h("div"), nx = h("button", { class: "btn primary hide", type: "button", onclick: resume }, "✨ Cast the rune");
-      const opts = h("div", { class: "opts" + (c.c.some(x => x.length > 14) ? " col" : "") });
+      const opts = h("div", { class: "opts" + (c.c.some(x => x.length > 14) ? " col" : "") }), cf = ConfidenceRow(opts);
       c.c.forEach((txt, i) => opts.append(h("button", { class: "opt", type: "button", onclick: () => {
-        opts.querySelectorAll("button").forEach(b => (b.disabled = true)); opts.children[c.a].classList.add("ok");
+        opts.querySelectorAll("button").forEach(b => (b.disabled = true)); opts.children[c.a].classList.add("ok"); const conf = cf.lock();
         if (i === c.a) { result = "right"; N.brain.right++; if (N.siege) N.hits++; N.crystal++; S().mats.crystal = (S().mats.crystal || 0) + 1; save.commit(); sfx("correct"); fb.className = "verdict good"; fb.innerHTML = "<b>Yes! The rune glows. +1 💎</b> " + c.why; }
-        else { result = "wrong"; sfx("wrong"); if (N.siege) N.wrong.add(r.key); opts.children[i].classList.add("no"); fb.className = "verdict bad"; fb.innerHTML = "<b>The rune flickers out.</b> " + c.why; nx.textContent = "Continue"; }
-        prog.record(r.key, i === c.a ? "own" : "wrong"); nx.classList.remove("hide"); setTimeout(() => nx.focus({ preventScroll: true }), 50);
+        else { result = "wrong"; sfx("wrong"); if (N.siege && !r.cmd) N.wrong.add(r.key); opts.children[i].classList.add("no"); fb.className = "verdict bad"; fb.innerHTML = "<b>The rune flickers out.</b> " + c.why; nx.textContent = "Continue"; }
+        // a command-word rune is about how to answer, not about a day, so it is not recorded against a day (and never marks a repair)
+        if (!r.cmd) prog.record(r.key, i === c.a ? "own" : "wrong", { conf });
+        const note = confNote(conf, i === c.a, false); if (note) fb.after(note);
+        nx.classList.remove("hide"); setTimeout(() => nx.focus({ preventScroll: true }), 50);
       } }, txt)));
-      body.append(opts, fb, nx); card.append(body);
+      body.append(cf.el, opts, fb, nx); card.append(body);
       window.__fdq = { type: "brain", obj: c };
     } else if ((r.patrol || r.mixed) && !r.picked) {
       /* "Which idea is this?": he names the day first, then answers. A right pick earns a crystal; a wrong one shows how to tell. */
@@ -388,13 +401,19 @@ export function createNight({ stage, fx, fort, island, save, prog, cards, ui, to
       const body = h("div", { class: "card stack pop" }), fb = h("div"), nx = h("button", { class: "btn primary hide", type: "button", onclick: resume }, "✨ Cast the rune");
       body.append(h("div", { class: "eyebrow" }, label), h("div", { class: "row", style: "justify-content:space-between;align-items:flex-start" }, h("div", { class: "qs", html: q.q }), SayBtn(() => q.q)));
       if (q.v) body.append(q.v());
-      const done = ok => { nx.classList.remove("hide"); setTimeout(() => nx.focus({ preventScroll: true }), 50); prog.record(r.key, ok ? "own" : "wrong"); };
-      body.append(AnswerBox(q.final.a, q.final.p, () => { result = "right"; N.hits++; sfx("correct"); fb.className = "verdict good"; fb.innerHTML = "<b>Hit! 💥 The rune glows.</b>"; done(true); }, () => {},
-        (f2, ans) => { result = "wrong"; N.wrong.add(r.key); sfx("wrong"); fb.className = "verdict bad"; fb.innerHTML = `<b>The rune flickers out.</b> ${ans != null ? "The answer is " + esc(ans) + ". " : ""}${q.why || ""}`; nx.textContent = "Continue"; done(false); }, { max: 1 }), fb, nx);
+      let cf = null;
+      const done = ok => { nx.classList.remove("hide"); setTimeout(() => nx.focus({ preventScroll: true }), 50); const conf = cf.lock(); prog.record(r.key, ok ? "own" : "wrong", { conf }); const note = confNote(conf, ok, false); if (note) fb.after(note); };
+      const box = AnswerBox(q.final.a, q.final.p, () => { result = "right"; N.hits++; sfx("correct"); fb.className = "verdict good"; fb.innerHTML = "<b>Hit! 💥 The rune glows.</b>"; done(true); }, () => {},
+        (f2, ans) => { result = "wrong"; N.wrong.add(r.key); sfx("wrong"); fb.className = "verdict bad"; fb.innerHTML = `<b>The rune flickers out.</b> ${ans != null ? "The answer is " + esc(ans) + ". " : ""}${q.why || ""}`; nx.textContent = "Continue"; done(false); }, { max: 1 });
+      cf = ConfidenceRow(box);
+      body.append(cf.el, box, fb, nx);
       card.append(body);
     } else {
       const q = r.obj; window.__fdq = { type: "own", obj: q };
-      const qc = QuestionCard(q, "own", res => { prog.record(r.key, res); if (r.card && cards) cards.answer(r.card, res, { q: q.q }); result = res === "own" ? "right" : res === "help" ? "half" : "wrong"; sfx(result === "wrong" ? "wrong" : "correct"); }, resume);
+      let cf = null;
+      const qc = QuestionCard(q, "own", res => { const conf = cf.lock(); prog.record(r.key, res, { conf }); if (r.card && cards) cards.answer(r.card, res, { q: q.q, conf }); result = res === "own" ? "right" : res === "help" ? "half" : "wrong"; sfx(result === "wrong" ? "wrong" : "correct");
+        const note = confNote(conf, res !== "wrong", !!r.card); if (note) qc.insertBefore(note, qc.lastElementChild); }, resume);
+      cf = attachConfidence(qc);
       qc.prepend(h("div", { class: "eyebrow" }, label));
       card.append(qc);
     }

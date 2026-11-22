@@ -113,9 +113,10 @@ export function createProgress(getS, commit, pack0 = activePack()) {
   const dayNo = key => { const tp = topic(key); return tp ? tp.pack.topics.filter(t => !t.kind || t.kind !== "exam").findIndex(t => t.id === tp.t.id) + 1 : 0; };
 
   /* ---- answers and streaks ---- */
-  function record(key, r) {
+  /* o.conf (optional): the confidence tap, "sure" | "think" | "guess", kept with the answer */
+  function record(key, r, o) {
     key = String(key);
-    const a = S().hist[key] || (S().hist[key] = []); a.push({ r, t: Date.now() }); if (a.length > 40) a.splice(0, a.length - 40);
+    const a = S().hist[key] || (S().hist[key] = []); a.push(o && o.conf ? { r, t: Date.now(), conf: o.conf } : { r, t: Date.now() }); if (a.length > 40) a.splice(0, a.length - 40);
     S().last[key] = Date.now();
     const d = today(); if (!S().days.includes(d)) { S().days.push(d); if (S().days.length > 60) S().days.shift(); }
     commit();
