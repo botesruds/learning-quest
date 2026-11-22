@@ -95,7 +95,7 @@ export const MAPS = {
       { name: "Seeing cells", link: "are seen with a microscope", cards: ["eyepiece × objective = magnification", "start on low power", "stain makes parts easier to see", "pencil drawing, no shading"] },
       { name: "Diffusion", link: "get what they need by", cards: ["high to low concentration", "oxygen into the blood", "faster when warmer", "needs no energy"] },
     ],
-    also: { "red blood cell: no nucleus, room for oxygen": [4], "oxygen into the blood": [0] },
+    also: { "red blood cell: no nucleus, room for oxygen": [1, 4], "oxygen into the blood": [0] },
     cross: { from: "cell membrane: controls in and out", to: 4, link: "lets substances in by", wrong: ["is made of", "protects the brain by"] },
     words: ["cell", "nucleus", "membrane", "cytoplasm", "mitochondria", "cell wall", "chloroplast", "vacuole", "microscope", "magnification", "stain", "diffusion", "concentration", "oxygen", "nerve cell", "red blood cell", "root hair cell", "form fits function"],
   },

@@ -141,7 +141,7 @@ export function SPWView(item, spw, save, key, onDone) {
       save.commit();
       const row = (lab, mine, theirs) => h("tr", {}, h("th", {}, lab), h("td", {}, mine), h("td", {}, theirs));
       area.replaceChildren(h("div", { class: "card stack" },
-        h("h3", {}, expert ? "💎 A scientist picked that sentence too!" : "Compare with a scientist"),
+        h("h3", {}, expert ? (pick.s === spw.best[0] ? "💎 A scientist picked that sentence too!" : "💎 Good pick: a scientist would accept that sentence too!") : "Compare with a scientist"),
         h("table", { class: "sci-t spwcmp" }, h("tr", {}, h("th", {}), h("th", {}, "You"), h("th", {}, "A scientist")),
           row("Sentence", item.text[pick.s], item.text[spw.best[0]]), row("Phrase", pick.p.text, spw.phrase), row("Word", pick.w.text, spw.word)),
         h("p", {}, h("b", {}, "Why the scientist picked it: "), spw.why),

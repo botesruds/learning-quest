@@ -14,7 +14,7 @@
    - Saves only S.storm = { v, every, from, pending, count, tarps: {key: {kind, at}}, statues: [{kind, at}], log: [...] }. */
 import { valleyModel } from "./valley.js";
 import { PACKS } from "../packs/index.js";
-import { pick, shuffle, esc } from "./qcore.js";
+import { pick, shuffle, esc, qStem } from "./qcore.js";
 import { QuestionCard } from "./qui.js";
 
 export const KINDS = {
@@ -130,7 +130,7 @@ export function createStorms({ h, save, prog, cards = null, valley, toast, sfx =
       if (ok) { sfx("correct"); fb.className = "verdict good"; fb.innerHTML = "<b>Yes!</b> Knowing which idea to use is half the battle."; }
       else { sfx("wrong"); fb.className = "verdict mid"; fb.innerHTML = `<b>This one is ${esc(labelOf(key))}.</b> ${esc(T.title)}. Now answer it.`; }
       nowBtn.classList.remove("hide"); setTimeout(() => nowBtn.focus({ preventScroll: true }), 50); } }, labelOf(k))));
-    const body = h("div", { class: "card stack pop" }, h("div", { class: "eyebrow" }, label), h("div", { class: "qs" }, "🧭 Which topic is this?"), h("div", { class: "qs small", html: q.q }));
+    const body = h("div", { class: "card stack pop" }, h("div", { class: "eyebrow" }, label), h("div", { class: "qs" }, "🧭 Which topic is this?"), h("div", { class: "qs small", html: qStem(q) }));
     if (q.v) body.append(q.v());
     body.append(opts, fb, nowBtn); sheet(body);
     window.__fdq = { type: "pick", obj: { ans: key, q } };

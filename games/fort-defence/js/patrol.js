@@ -5,7 +5,7 @@
      version, so the patrol always ends on a try he can win. The second chance never moves the card.
    - Practise one idea (from the report card): the rule card first, then each of that idea's cards.
    - Armoury: every card as a weapon, its metal showing its box, dented ones tagged for repair. */
-import { h, H, shuffle, pick, esc } from "./qcore.js";
+import { h, H, shuffle, pick, esc, qStem } from "./qcore.js";
 import { QuestionCard, UnderstandCard, attachConfidence, confNote } from "./qui.js";
 import { sfx } from "./audio.js";
 import { LOOT } from "./day.js";
@@ -80,7 +80,7 @@ export function createPatrol({ save, prog, cards, day, toast, onLeave }) {
         else { sfx("wrong"); fb.className = "verdict mid"; fb.innerHTML = `<b>This one is Day ${dayNo(d.key)}: ${esc(d.t.short)}.</b> Now answer it.`; }
         go.classList.remove("hide"); setTimeout(() => go.focus({ preventScroll: true }), 50); } }, `Day ${dayNo(t)}: ${prog.topic(t).t.short}`)));
       peek("pick", { ans: d.key, q });
-      k.set(h("div", { class: "stack" }, progEl, head, h("div", { class: "card stack pop" }, h("div", { class: "qs" }, "🧭 Which idea is this?"), h("div", { class: "qs small", html: q.q }), q.v ? q.v() : null, opts, fb, go)));
+      k.set(h("div", { class: "stack" }, progEl, head, h("div", { class: "card stack pop" }, h("div", { class: "qs" }, "🧭 Which idea is this?"), h("div", { class: "qs small", html: qStem(q) }), q.v ? q.v() : null, opts, fb, go)));
     }
     function reteach(d, then, lead) {
       const rules = ruleOf(d.key);
