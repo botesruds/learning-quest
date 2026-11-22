@@ -12,6 +12,7 @@ import { createLibrary } from "./library.js";
 import { createCards } from "./cards.js";
 import { createPatrol } from "./patrol.js";
 import { createReport } from "./report.js";
+import { createScribe } from "./scribe.js";
 import { MATS, PIECES } from "./pieces.js";
 import { createBuilder } from "./builder.js";
 
@@ -36,7 +37,7 @@ stage.onFrame((dt, t) => live.forEach(o => o.userData.update && o.userData.updat
 const addLive = o => { if (o.userData.update) live.add(o); scene.add(o); return o; };
 
 let keep = null, heroObj = null, petObj = null, bannerG = null, bannerN = -1;
-let island = null, water = null, sceneryG = null, lookNow = 1, fort = null, builder = null, prog = null, day = null, night = null, library = null, cards = null, patrol = null, report = null;
+let island = null, water = null, sceneryG = null, lookNow = 1, fort = null, builder = null, prog = null, day = null, night = null, library = null, scribe = null, cards = null, patrol = null, report = null;
 function buildWorld(region = 1) {
   const L = REGION_LOOK[region];
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -202,6 +203,7 @@ function dawnScreen() {
       h("button", { class: "btn small plain rpbtn", type: "button", onclick: () => { sfx("click"); report.openReport(); } }, "📊 Report"),
       h("button", { class: "btn small plain", type: "button", onclick: () => { sfx("click"); day.openShop(); } }, "🛡️ Hero shop"),
       library && library.has() ? h("button", { class: "btn small plain libbtn" + (library.news() ? " new" : ""), type: "button", onclick: () => { sfx("click"); library.open(); } }, "📚 Library", library.news() ? h("i", { class: "dot", "aria-label": "something new" }) : null) : null,
+      scribe && scribe.has() ? h("button", { class: "btn small plain scribebtn" + (scribe.news() ? " new" : ""), type: "button", onclick: () => { sfx("click"); scribe.open(); } }, "✍️ Scribe", scribe.news() ? h("i", { class: "dot", "aria-label": "something new" }) : null) : null,
       chest ? h("button", { class: "btn small gold", type: "button", onclick: () => { sfx("click"); day.openChest(chest.pack, chest.region); } }, "🎁 New scout report") : null,
       crack ? h("button", { class: "btn small crackbtn", type: "button", onclick: () => { sfx("click"); day.openRepair(crack); } }, `🔧 Fix a crack (${cracks.length})`) : null));
   ui.replaceChildren(hud([back]), matsChips(), h("div", { class: "grow" }), card);
@@ -322,11 +324,13 @@ function demoFort() {
   patrol = createPatrol({ save, prog, cards, day, toast });
   report = createReport({ save, prog, cards, day, patrol, toast });
   day.setReport && day.setReport(report);
+  scribe = createScribe({ save, prog, day, toast, onChange: () => {} });
+  day.addParentSection((dots, when, repaint) => scribe.has() ? scribe.parentSection(dots, when, repaint) : null);
   night = createNight({ stage, fx, fort, island, save, prog, cards, ui, toast, hud, onMorning: r => day.morning(r), onLeave: () => { playMusic("day"); dawnScreen(); } });
   showRegion(regionNow());
   titleScreen();
   const wake = () => { if (unlockAudio() && S().music && !builder.selected) playMusic("title"); removeEventListener("pointerdown", wake); };
   addEventListener("pointerdown", wake);
   if (DEV && save.practice) bench();   // the test bench never touches a real save
-  window.__fd = { stage, save, fx, fort, builder, prog, day, night, library, cards, patrol, report, THREE, dawnScreen, startNight, startSiege, demoFort, setLook, dressHero, showRegion, visitFort };
+  window.__fd = { stage, save, fx, fort, builder, prog, day, night, library, scribe, cards, patrol, report, THREE, dawnScreen, startNight, startSiege, demoFort, setLook, dressHero, showRegion, visitFort };
 })();

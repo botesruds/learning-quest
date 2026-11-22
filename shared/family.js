@@ -68,6 +68,7 @@
     get ready(){ return !!((dev||key)&&player); },
     get hasKey(){ return !!(dev||key); },          // "this device is connected to the family"
     get paired(){ return !!dev; },
+    get pass(){ return dev?{dev}:(key?{key}:null); },   // for the site's own functions (the writing coach) to check this device belongs to a family
     get player(){ return player; },
     nickname:"",
     deviceName,

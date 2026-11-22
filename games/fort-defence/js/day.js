@@ -312,6 +312,15 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
       LearnView(p.cards, i, j => openChest(pack, r, j), () => { const first = !S().chests[ck]; S().chests[ck] = true; if (first) grant({ gold: 20 }); else save.commit(); setTimeout(() => close("chest"), first ? 700 : 0); }, null, S().chests[ck] ? "Done" : "Collect 20 🪙")));
   }
 
+  /* ---------- peek ahead: read a locked day's lesson before class. Read only: no loot, no stars, the day stays locked. ---------- */
+  function peekAhead(key, i = 0) {
+    if (!sheet) mountSheet(); ctx = null;
+    const T = prog.topic(key).t;
+    head([h("div", { class: "row", style: "justify-content:space-between;align-items:flex-start" }, h("div", {}, h("div", { class: "eyebrow" }, `👀 Peek ahead · Day ${prog.dayNo(key)}`), h("h2", {}, T.short)), closeBtn()), lootbar]);
+    set(h("div", { class: "stack peek" }, mission("👀 Getting ready for class: read this lesson now, so it feels familiar when your teacher starts it. No stars yet: the day opens for real when you get 3 stars on the day before."),
+      LearnView(T.learn, i, j => peekAhead(key, j), () => { S().peeked = S().peeked || {}; S().peeked[key] = true; save.commit(); openMap(); }, null, "Back to the map")));
+  }
+
   /* ---------- the quest map: every region and day, with stars ---------- */
   function openMap() {
     if (!sheet) mountSheet(); ctx = null;
@@ -324,8 +333,8 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
         if (n.t === "chest") return h("button", { class: "qtile chest" + (done ? " done" : ""), type: "button", onclick: () => openChest(pack, r) }, h("span", { class: "z" }, "📜"), h("span", { class: "nm" }, "Scout report"), h("span", { class: "kind" }, done ? "read" : "sneak peek"));
         if (n.t === "level") { const tp = prog.topic(n.key), st = prog.stars(n.key), rep = S().repair[n.key];
           return h("button", { class: "qtile" + (open ? "" : " locked") + (isCur ? " next" : "") + (tp.t.big ? " big" : ""), type: "button", "aria-label": `Day ${prog.dayNo(n.key)}: ${tp.t.short}. ${st} stars.${open ? "" : " Locked."}`,
-            onclick: () => { if (!open) { sfx("wrong"); toast("Get 3 stars on the day before to open this one."); return; } sfx("click"); open_(n.key); } },
-            h("span", { class: "z" }, String(prog.dayNo(n.key))), h("span", { class: "nm" }, tp.t.short), h("span", { class: "st" }, rep ? "🔧 repair" : "⭐".repeat(st) + "☆".repeat(3 - st))); }
+            onclick: () => { sfx("click"); if (!open) { peekAhead(n.key); return; } open_(n.key); } },
+            h("span", { class: "z" }, String(prog.dayNo(n.key))), h("span", { class: "nm" }, tp.t.short), h("span", { class: "st" }, open ? (rep ? "🔧 repair" : "⭐".repeat(st) + "☆".repeat(3 - st)) : (S().peeked && S().peeked[n.key] ? "👀 peeked" : "👀 peek"))); }
         const lord = n.t === "lord" ? r.lord : r.final;
         return h("button", { class: "qtile lord" + (open ? "" : " locked") + (done ? " done" : ""), type: "button", onclick: () => toast(done ? `You beat ${lord.name}!` : open ? `${cap(lord.name)} is waiting. Face him from the dawn screen.` : "Master every day in this region first.") }, h("span", { class: "z" }, n.t === "final" ? "🐉" : "👹"), h("span", { class: "nm" }, cap(lord.name)), h("span", { class: "kind" }, done ? "beaten" : "demon lord"));
       });
@@ -411,6 +420,7 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
             return h("div", { class: "pc-row" }, h("b", { class: "pc-day" }, st.icon), h("div", { class: "pc-t" }, h("b", {}, `Floor ${st.n}: ${st.name}`), h("div", { class: "small muted" }, st.does)),
               h("span", { class: "pc-st", "aria-label": n + " stars" }, "⭐".repeat(n) + "☆".repeat(3 - n)), dots("lib:" + st.k)); })));
       }
+      extraParent.forEach(fn => { const el = fn(dots, when, paint); if (el) parts.push(el); });   // the Scribe's Tower writing desk
       const ex = (S().exams || []).filter(e => (e.pack || "algebra-u3") === prog.pack.id);
       if (ex.length) parts.push(h("div", { class: "card small" }, h("b", {}, `Practice exam (${prog.pack.regions.find(r => r.final) ? cap(prog.pack.regions.find(r => r.final).final.name) : "final boss"}) attempts`), h("p", {}, ex.slice(-6).map(e => `${when(e.t)}: ${e.score}/${e.total}`).join(" · "))));
       let armed = false;
@@ -425,8 +435,9 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
   }
 
   /* the sheet's helpers, for other screens that live on the same sheet (the Library tower) */
+  const extraParent = [];
   const kit = () => { if (!sheet) mountSheet(); ctx = { key: null, loot: {} }; paintLoot(); return { head, set, closeBtn, mission, celebrate, bigbtn, linkbtn, grant, lootbar }; };
 
   let report = null; const setReport = r => { report = r; };
-  return { setReport, kit, open: open_, openChest, openMap, openShop, openParentGate, openParent, openRepair, morning, close, grant, get isOpen() { return !!sheet; }, paintLoot };
+  return { setReport, kit, addParentSection: fn => extraParent.push(fn), open: open_, openChest, openMap, peekAhead, openShop, openParentGate, openParent, openRepair, morning, close, grant, get isOpen() { return !!sheet; }, paintLoot };
 }
