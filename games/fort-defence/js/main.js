@@ -9,7 +9,12 @@ import { createProgress } from "./progress.js";
 import { createDay } from "./day.js";
 import { createNight } from "./night.js";
 import { createLibrary } from "./library.js";
+import { createCards } from "./cards.js";
+import { createPatrol } from "./patrol.js";
+import { createReport } from "./report.js";
 import { createScribe } from "./scribe.js";
+import { createValley } from "./valley.js";
+import { createStorms } from "./storms.js";
 import { MATS, PIECES } from "./pieces.js";
 import { createBuilder } from "./builder.js";
 
@@ -34,7 +39,7 @@ stage.onFrame((dt, t) => live.forEach(o => o.userData.update && o.userData.updat
 const addLive = o => { if (o.userData.update) live.add(o); scene.add(o); return o; };
 
 let keep = null, heroObj = null, petObj = null, bannerG = null, bannerN = -1;
-let island = null, water = null, sceneryG = null, lookNow = 1, fort = null, builder = null, prog = null, day = null, night = null, library = null, scribe = null;
+let island = null, water = null, sceneryG = null, lookNow = 1, fort = null, builder = null, prog = null, day = null, night = null, library = null, scribe = null, valley = null, storms = null, cards = null, patrol = null, report = null;
 function buildWorld(region = 1) {
   const L = REGION_LOOK[region];
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -168,8 +173,14 @@ function dawnScreen() {
   stage.setShift(0, 0); rig.autoSpin = 0.03; stage.flyTo(DAWN_VIEW, 1.4);
   prog.towerMigrate();
   const cur = prog.currentNode(), todo = prog.towerTodo(cur);
-  let main, sub = "";
-  if (todo.length) {   // the demon lord waits until this land's reading and royal reports are done
+  let main, sub = "", skip = null;
+  const due = cards ? cards.patrolWaiting() : 0;
+  if (due) {
+    // the morning patrol comes first: today's review cards from every subject (the day can still be played)
+    main = h("button", { class: "btn pulse go-day patrolbtn", type: "button", onclick: () => { sfx("whoosh"); patrol.openPatrol(); } }, `🛡️ Patrol first: ${due} card${due > 1 ? "s" : ""}`);
+    sub = `Check the weapons in your armoury: ideas you already know. About ${Math.max(2, Math.round(due * 0.7))} minutes.`;
+    skip = h("button", { class: "link skip-patrol", type: "button", onclick: () => { sfx("click"); patrol.skipPatrol(); dawnScreen(); } }, "Skip the patrol for today");
+  } else if (todo.length) {   // the demon lord waits until this land's reading and royal reports are done
     const lord = cur.t === "final" ? cur.region.final : cur.region.lord, nr = todo.filter(t => t.kind === "read").length, nw = todo.length - nr;
     const go = nr ? () => library.open() : () => scribe.open();
     main = h("button", { class: "btn pulse go-day", type: "button", onclick: () => { sfx("whoosh"); go(); } }, nr ? `📚 Read for the battle (${todo.length} to go)` : `✍️ Write for the battle (${todo.length} to go)`);
@@ -192,11 +203,17 @@ function dawnScreen() {
   const chest = prog.road.find(n => n.t === "chest" && !prog.nodeDone(n) && n.region === (cur.region || {}));
   const cracks = fort.crackList().filter(c => !S().repair[c.topic]), crack = cracks[0];   // a demon lord's cracks are fixed by the repair day
   const back = h("button", { class: "chip icon", type: "button", "aria-label": "Back to the title", title: "Back", onclick: () => { sfx("click"); stage.flyTo(TITLE_VIEW, 1.4); setTimeout(() => (rig.autoSpin = 0.05), 1400); stopMusic(); setTimeout(() => playMusic("title"), 300); titleScreen(); } }, "◀");
+  const vn = valley ? valley.news() : null, vNew = vn && (vn.first || vn.n > 0);
+  const grew = vn && vn.n > 0 ? h("p", { class: "vgrew" }, `🏡 Your valley grew: ${vn.n} new building${vn.n > 1 ? "s" : ""}!`, h("button", { class: "btn small", type: "button", onclick: () => { sfx("whoosh"); valley.open(); } }, "See it"))
+    : vn && vn.first ? h("p", { class: "vgrew" }, "🏡 Everything you've learned has built a valley!", h("button", { class: "btn small", type: "button", onclick: () => { sfx("whoosh"); valley.open(); } }, "See it")) : null;
+  const sl = storms ? storms.dawnLine() : null, news = sl && sl.classList.contains("vstorm") ? sl : (grew || sl);   // one valley line: a storm first, then news, tarps, a warning
   const card = h("div", { class: "dawn panel fade-in" },
-    h("p", { class: "dsub" }, sub), main,
+    h("p", { class: "dsub" }, sub), main, skip, news,
     h("div", { class: "drow" },
       h("button", { class: "btn small blue", type: "button", onclick: () => { sfx("click"); rig.autoSpin = 0; stage.flyTo(BUILD_VIEW, 1.2); buildScreen(); } }, "🔨 Build"),
       h("button", { class: "btn small plain", type: "button", onclick: () => { sfx("click"); day.openMap(); } }, "📜 Quest map"),
+      h("button", { class: "btn small plain rpbtn", type: "button", onclick: () => { sfx("click"); report.openReport(); } }, "📊 Report"),
+      valley ? h("button", { class: "btn small plain valleybtn", type: "button", onclick: () => { sfx("click"); valley.open(); } }, "🏡 Valley", vNew ? h("i", { class: "dot", "aria-label": "something new" }) : null) : null,
       h("button", { class: "btn small plain", type: "button", onclick: () => { sfx("click"); day.openShop(); } }, "🛡️ Hero shop"),
       library && library.has() ? h("button", { class: "btn small plain libbtn" + (library.news() ? " new" : ""), type: "button", onclick: () => { sfx("click"); library.open(); } }, "📚 Library", library.news() ? h("i", { class: "dot", "aria-label": "something new" }) : null) : null,
       scribe && scribe.has() ? h("button", { class: "btn small plain scribebtn" + (scribe.news() ? " new" : ""), type: "button", onclick: () => { sfx("click"); scribe.open(); } }, "✍️ Scribe", scribe.news() ? h("i", { class: "dot", "aria-label": "something new" }) : null) : null,
@@ -318,13 +335,21 @@ function demoFort() {
     onFixTopic: key => { fort.crackList().filter(c => c.topic === key).forEach(c => fort.fixCrack(c.cell)); save.commit(); },
     onClose: why => { if (why === "stop") { stopMusic(); stage.flyTo(TITLE_VIEW, 1.4); setTimeout(() => (rig.autoSpin = 0.05), 1400); titleScreen(); toast("Great work today, Commander. Your fort is saved and waiting."); } else if (afterParent) { const w = afterParent; afterParent = null; if (w === "title") titleScreen(); else dawnScreen(); } else if (why !== "build" && why !== "nav" && why !== "night") dawnScreen(); } });
   library = createLibrary({ save, prog, day, toast, onChange: () => {} });
+  cards = createCards(S, () => save.commit(), prog);
+  patrol = createPatrol({ save, prog, cards, day, toast });
+  report = createReport({ save, prog, cards, day, patrol, toast });
+  day.setReport && day.setReport(report);
   scribe = createScribe({ save, prog, day, toast, onChange: () => {} });
   day.addParentSection((dots, when, repaint) => scribe.has() ? scribe.parentSection(dots, when, repaint) : null);
-  night = createNight({ stage, fx, fort, island, save, prog, ui, toast, hud, onMorning: r => day.morning(r), onLeave: () => { playMusic("day"); dawnScreen(); } });
+  valley = createValley({ ui, h, save, prog, day, library, scribe, toast, sfx, mainStage: stage, onClose: () => { if (inGame) dawnScreen(); else titleScreen(); } });
+  storms = createStorms({ h, save, prog, cards, valley, toast, sfx }); valley.setStorms(storms);
+  day.addParentSection((dots, when, repaint) => storms.parentSection(dots, when, repaint));
+  night = createNight({ stage, fx, fort, island, save, prog, cards, ui, toast, hud, onMorning: r => day.morning(r), onLeave: () => { playMusic("day"); dawnScreen(); } });
   showRegion(regionNow());
   titleScreen();
   const wake = () => { if (unlockAudio() && S().music && !builder.selected) playMusic("title"); removeEventListener("pointerdown", wake); };
   addEventListener("pointerdown", wake);
+  if (new URLSearchParams(location.search).has("valley")) { inGame = true; unlockAudio(); valley.open(); }   // the home page's Valley card
   if (DEV && save.practice) bench();   // the test bench never touches a real save
-  window.__fd = { stage, save, fx, fort, builder, prog, day, night, library, scribe, THREE, dawnScreen, startNight, startSiege, demoFort, setLook, dressHero, showRegion, visitFort };
+  window.__fd = { stage, save, fx, fort, builder, prog, day, night, library, scribe, valley, storms, cards, patrol, report, THREE, dawnScreen, startNight, startSiege, demoFort, setLook, dressHero, showRegion, visitFort };
 })();
