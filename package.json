@@ -1,0 +1,8 @@
+{
+  "name": "learning-quest",
+  "private": true,
+  "description": "Oliver's learning site. Static pages, plus one function (api/coach.js) for the Scribe's Tower writing coach.",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.12.0"
+  }
+}
