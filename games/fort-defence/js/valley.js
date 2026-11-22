@@ -9,7 +9,7 @@
    - Coming-up plots carry a signpost; tapping one offers the peek-ahead lesson, so the valley previews class topics.
    - It never gates anything and needs nothing managed: he can only look, turn the view and tap.
    Drawn with its own 3D stage (same blocky style as the forts); the fort's stage pauses while the valley is open. */
-import { THREE, createStage, block, group, mat, isTouch, reducedMotion, lowGfx } from "./gfx.js";
+import { THREE, createStage, createParticles, block, group, mat, isTouch, reducedMotion, lowGfx } from "./gfx.js";
 import { makeTree, makeFlower, REGION_LOOK } from "./models.js";
 import { mergeGeometries } from "../vendor/addons/BufferGeometryUtils.js";
 import { PACKS } from "../packs/index.js";
@@ -26,6 +26,8 @@ export const ERAS = [
 ];
 export const eraOf = n => ERAS.reduce((a, e, i) => (n >= e.at ? i : a), 0);
 
+const STATUE_NAMES = { storm: "⚡ The Storm Stone", flood: "🌊 The Flood Post", locusts: "🦗 The Swarm Bell", rockslide: "🪨 The Rock Cairn" };
+const statueName = k => STATUE_NAMES[k] || "🗿 A keepsake statue";
 const QUARTER_NAMES = { "algebra-u3": "Builders' Yard", "science-u2": "Healers' Garden" };
 const PACK_COLS = [0x3d6fd6, 0x2f9e5e, 0xc2453a, 0x2a9bb0, 0xb0663a, 0x6a7a2a];
 const PACK_SLOTS = ["NW", "NE", "N", "W", "E", "S"];
@@ -207,6 +209,24 @@ function outpost(col) {
   return g;
 }
 const VCOLS = [0xe34b4b, 0x2f6fde, 0xf2b134, 0x7c4dff, 0x2f9e5e, 0xff8ab8, 0x2fb7c9, 0xa0522d];
+/* a storm tarp over a roof (js/storms.js): mended with 2 questions */
+function tarp(w, top) {
+  const g = new THREE.Group(), s = w + 0.2;
+  const a = block(s, 0.05, s * 0.62, 0x2f7fe0, 0, top - 0.32, -s * 0.2, { r: 0.01 }); a.rotation.x = 0.5;
+  const b = block(s * 0.7, 0.05, s * 0.5, 0x2a6fc4, 0.05, top - 0.36, s * 0.24, { r: 0.01 }); b.rotation.x = -0.55;
+  g.add(a, b);
+  [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(([x, z]) => g.add(block(0.12, 0.1, 0.12, 0x8d8a83, x * (w / 2 + 0.16), 0, z * (w / 2 + 0.16), { r: 0.03 })));
+  g.userData.tarp = true; return g;
+}
+/* a keepsake statue for a storm fully defended */
+function statue(kind) {
+  const g = group(block(0.5, 0.3, 0.5, 0xb9b3a6, 0, 0, 0, { r: 0.04 }), block(0.36, 0.08, 0.36, 0xe8b73a, 0, 0.3, 0, { r: 0.02 }));
+  if (kind === "storm") { const z1 = block(0.1, 0.38, 0.1, 0xffd23f, 0, 0.38, 0, { r: 0.02, emissive: 0xffb020, ei: 0.4 }); z1.rotation.z = 0.5; const z2 = block(0.1, 0.38, 0.1, 0xffd23f, 0.1, 0.68, 0, { r: 0.02, emissive: 0xffb020, ei: 0.4 }); z2.rotation.z = -0.5; g.add(z1, z2); }
+  else if (kind === "flood") { g.add(block(0.14, 0.7, 0.14, 0x6b4a32, 0, 0.38, 0, { r: 0.03 })); [0.55, 0.75, 0.95].forEach(y => g.add(block(0.18, 0.04, 0.18, 0x2fa7e6, 0, y, 0, { r: 0.01 }))); }
+  else if (kind === "locusts") { g.add(block(0.06, 0.3, 0.06, 0x6b4a32, 0, 0.38, 0, { r: 0 })); g.add(at(pyramid(0.34, 0.3, 0xc8963a), 0, 0.52, 0)); }
+  else { [[0.36, 0.38], [0.26, 0.6], [0.16, 0.78]].forEach(([w, y]) => g.add(block(w, w * 0.8, w, 0x9a958b, 0, y, 0, { r: 0.05 }))); }
+  return g;
+}
 function villager(i) {
   const g = group(block(0.2, 0.26, 0.16, VCOLS[i % VCOLS.length], 0, 0, 0, { r: 0.04 }), block(0.16, 0.16, 0.16, [0xf2c9a0, 0xd9a273, 0x8d5a3b, 0xffe0bd][i % 4], 0, 0.26, 0, { r: 0.04 }));
   return g;
@@ -216,6 +236,7 @@ function villager(i) {
 export function createValley({ ui, h, save, prog, day, library, scribe, toast, sfx = () => {}, mainStage, onClose }) {
   const S = () => save.state;
   let stage = null, canvas = null, world = null, open_ = false, pickables = [], walkers = [], info = null, bar = null, caption = null, offFrame = null, popping = [];
+  let fx = null, mode = {}, storms = null;
   const V = () => S().valley || null;
   const playerName = () => { const p = (window.Family && Family.ready && Family.player) || ""; return p ? p[0].toUpperCase() + p.slice(1) + "'s Valley" : "My Valley"; };
 
@@ -233,7 +254,8 @@ export function createValley({ ui, h, save, prog, day, library, scribe, toast, s
     canvas.style.cssText = "position:fixed;inset:0;width:100%;height:100%;display:none;touch-action:none";
     const c0 = document.getElementById("c"); c0.after(canvas);
     stage = createStage(canvas); stage.pause(true);
-    stage.onFrame((dt, t) => { if (world) world.traverse(o => o.userData.update && o.userData.update(dt, t)); walk(dt); pop(dt); });
+    fx = createParticles(stage.scene, 400);
+    stage.onFrame((dt, t) => { if (world) world.traverse(o => o.userData.update && o.userData.update(dt, t)); walk(dt); pop(dt); fx.update(dt); sky(dt, t); effects(dt); });
     controls();
   }
 
@@ -266,6 +288,7 @@ export function createValley({ ui, h, save, prog, day, library, scribe, toast, s
     world.add(block(N, 0.3, 5, 0x2fa7e6, 0, -0.42, HALF + 2.5, { r: 0, cast: false, receive: false }));
 
     // the quarters: one building per thing mastered, a signpost for what is next
+    const tarps = (S().storm && S().storm.tarps) || {};
     m.quarters.forEach(q => {
       const plots = plotsFor(q.slot), list = m.items.filter(i => i.q === q);
       let nextShown = false;
@@ -276,6 +299,7 @@ export function createValley({ ui, h, save, prog, day, library, scribe, toast, s
         if (it.done) {
           obj = it.kind === "lord" ? lordTower(q.col) : it.kind === "final" ? finalSpire(q.col) : house(era, q.col, it.tower === "library" ? "lantern" : it.tower === "scribe" ? "quill" : null);
           if (it.repair) obj.add(scaffold(obj.userData.w, obj.userData.h * 0.8));
+          if (it.kind === "day" && tarps[it.key]) { obj.add(tarp(obj.userData.w, obj.userData.h)); it.tarp = tarps[it.key]; }
           obj.rotation.y = Math.floor(rnd() * 4) * Math.PI / 2;
         } else if (!nextShown) { nextShown = true; obj = signpost(q.col); obj.rotation.y = 0.6; it.next = true; }
         else if (era >= 1 && q.slot !== "NW" && q.slot !== "NE" && (i % 2 === 0)) { /* empty tower plots become gardens */ obj = field(era >= 2); }
@@ -306,6 +330,10 @@ export function createValley({ ui, h, save, prog, day, library, scribe, toast, s
       let s2 = 3; const r2 = () => (s2 = (s2 * 16807) % 2147483647) / 2147483647;
       [[-3, 3.3], [3.3, -3.3], [-3.3, -3.3], [3.3, 0.2]].forEach(([x, z]) => { for (let i = 0; i < 5; i++) { const f = makeFlower(r2); f.position.set(x + (r2() - 0.5) * 0.9, 0, z + (r2() - 0.5) * 0.9); world.add(f); } });
     }
+
+    // keepsake statues from storms he kept the valley safe in (js/storms.js)
+    const STATUE_SPOTS = [[-3.7, 0.4], [3.7, 0.4], [-0.9, 3.7], [1.1, 3.7], [-3.7, -1.4], [3.7, -1.4], [-1.2, -3.7], [1.4, -3.7]];
+    ((S().storm && S().storm.statues) || []).slice(-8).forEach((st, i) => { const [x, z] = STATUE_SPOTS[i]; add(statue(st.kind), x, z, { title: statueName(st.kind), line: "A keepsake: you kept the whole valley safe from this on " + st.at + "." }, i * 0.7); });
 
     // his forts stand guard on the edge: one small outpost for each land he has reached
     m.quarters.filter(q => q.pack).forEach(q => {
@@ -441,6 +469,7 @@ export function createValley({ ui, h, save, prog, day, library, scribe, toast, s
         if (L && L.can) lines.push(h("p", { class: "vcan" }, h("i", { class: "vlight " + L.light, "aria-hidden": "true" }), L.can + " ", h("b", {}, "(" + L.word + ")")));
         if (it.kind === "day" || it.kind === "floor") lines.push(h("p", { class: "vstars", "aria-label": it.stars + " stars" }, starsTxt(it.stars) + "  Mastered"));
         if (it.repair) lines.push(h("p", { class: "vrepair" }, "🔧 A demon lord found a weak spot here. Win the repair day and the scaffolding comes down."));
+        if (it.tarp && storms) lines.push(h("p", { class: "vrepair" }, "🧰 The storm damaged this roof. Get 2 right on your own to take the tarp off."), h("button", { class: "btn small", type: "button", onclick: () => { sfx("click"); showInfo(null); storms.mend(it.key); } }, "🧰 Mend the roof"));
         if (it.kind === "lord" || it.kind === "final") lines.push(h("p", {}, "This tower went up when you won. It keeps watch over the " + q.name + "."));
         body = lines;
       }
@@ -461,7 +490,9 @@ export function createValley({ ui, h, save, prog, day, library, scribe, toast, s
   function say(text, ms = 4200) { if (caption) caption.remove(); caption = h("div", { class: "vcaption fade-in", role: "status" }, text); ui.append(caption); const c = caption; setTimeout(() => { if (c.isConnected) c.remove(); }, ms); }
 
   /* ---------- open and close ---------- */
-  function open() {
+  function open(opts) {
+    if (open_) close_(true);
+    mode = opts || {};
     ensureStage(); open_ = true;
     mainStage && mainStage.pause(true);
     canvas.style.display = "block"; stage.resize(); stage.setMood("day"); stage.pause(false);
@@ -473,6 +504,7 @@ export function createValley({ ui, h, save, prog, day, library, scribe, toast, s
     if (!V()) return nameIt(m);
     afterOpen(m, nw);
   }
+  const ready = () => { const f = mode.then; mode.then = null; if (f) setTimeout(() => open_ && f(), 400); };
   function afterOpen(m, nw) {
     const v = V(), seen = new Set(v.seen || []);
     const fresh = m.items.filter(i => i.done && !seen.has(i.id));
@@ -492,6 +524,7 @@ export function createValley({ ui, h, save, prog, day, library, scribe, toast, s
     if ((v.era || 0) < m.era && !firstTime) { setTimeout(() => { if (open_) { sfx("horn"); say(ERAS[m.era].grew, 5000); } }, fresh.length ? 2600 : 300); }
     v.era = m.era; v.seen = m.items.filter(i => i.done).map(i => i.id); v.v = 1;
     save.commit();
+    ready();
   }
   function nameIt(m) {
     const inp = h("input", { class: "vname", type: "text", maxlength: "24", value: playerName(), "aria-label": "Your valley's name", autocomplete: "off" });
@@ -502,15 +535,67 @@ export function createValley({ ui, h, save, prog, day, library, scribe, toast, s
     inp.addEventListener("keydown", e => { if (e.key === "Enter") done(inp.value); });
     ui.append(panel); setTimeout(() => inp.focus({ preventScroll: true }), 80);
   }
-  function close_() {
+  function close_(quiet) {
     if (!open_) return; open_ = false;
+    const m0 = mode; mode = {}; if (m0.onClose) m0.onClose();
+    weather(null);
     showInfo(null); if (caption) caption.remove();
     stage.pause(true); canvas.style.display = "none"; popping = [];
     if (world) { stage.scene.remove(world); world.traverse(o => { if (o.isInstancedMesh) o.dispose(); else if (o.userData.baked) o.geometry.dispose(); }); world = null; }
+    if (quiet === true) return;
     mainStage && mainStage.pause(false);
     onClose && onClose();
   }
+
+  /* ---------- storms (js/storms.js): the weather, the defences and rebuilding after ---------- */
+  let wx = null, flashT = 3, fxList = [];
+  function weather(kind, flash) {
+    if (wx) { stage.scene.remove(wx.mesh); wx.mesh.geometry.dispose(); wx.mesh.material.dispose(); wx = null; }
+    if (!stage) return;
+    if (!kind) { stage.setMood("day"); stage.hemi.intensity = 1.25; return; }
+    stage.setMood(kind === "dust" ? "dusk" : "dusk"); stage.hemi.intensity = 0.75; stage.sun.intensity = 1.1;
+    const n = reducedMotion ? 0 : lowGfx ? 60 : isTouch ? 160 : 280; if (!n) return;
+    const geo = kind === "rain" ? new THREE.BoxGeometry(0.035, 0.55, 0.035) : kind === "swarm" ? new THREE.BoxGeometry(0.13, 0.07, 0.13) : new THREE.BoxGeometry(0.22, 0.2, 0.22);
+    const mesh = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: kind === "rain" ? 0xb9d8ff : kind === "swarm" ? 0x4a4a22 : 0x9a8466, transparent: kind === "rain", opacity: 0.7, roughness: 0.8 }), n);
+    mesh.frustumCulled = false; mesh.castShadow = false;
+    const P = Array.from({ length: n }, (_, i) => ({ x: (Math.random() - 0.5) * 36, y: Math.random() * 14, z: (Math.random() - 0.5) * 36, a: Math.random() * 6, r: 2 + Math.random() * 6, c: i % 3, s: 0.6 + Math.random() * 0.8 }));
+    wx = { kind, mesh, P, flash: !!flash, t: 0, d: new THREE.Object3D() }; stage.scene.add(mesh); flashT = 2;
+  }
+  const SWARMS = [[-9, -8], [9, -9], [0, 8]];
+  function sky(dt, t) {
+    if (!wx) return; const { P, d, mesh, kind } = wx; wx.t += dt;
+    P.forEach((p, i) => {
+      if (kind === "rain") { p.y -= 16 * dt * p.s; p.x += 1.5 * dt; if (p.y < 0) { p.y = 12 + Math.random() * 3; p.x = (Math.random() - 0.5) * 36; } d.position.set(p.x, p.y, p.z); d.rotation.set(0, 0, -0.1); }
+      else if (kind === "swarm") { p.a += dt * (1.2 + p.s); const [cx, cz] = SWARMS[p.c]; const sx = cx + Math.sin(wx.t * 0.3 + p.c) * 4; d.position.set(sx + Math.cos(p.a) * p.r * 0.5, 3 + Math.sin(p.a * 1.7) * 1.2 + p.s, cz + Math.sin(p.a) * p.r * 0.5); d.rotation.set(0, p.a, 0); }
+      else { p.z += 3 * dt * p.s; p.a += dt * 3; if (p.z > 18) { p.z = -18; p.x = (Math.random() - 0.5) * 36; } d.position.set(p.x, 0.2 + Math.abs(Math.sin(p.a)) * 1.2 * p.s, p.z); d.rotation.set(p.a, p.a * 0.7, 0); }
+      d.updateMatrix(); mesh.setMatrixAt(i, d.matrix);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    if (wx.flash && !reducedMotion) { flashT -= dt; if (flashT < 0) { flashT = 3 + Math.random() * 4; stage.hemi.intensity = 3; sfx("cannon"); setTimeout(() => { if (wx) stage.hemi.intensity = 0.75; }, 110); } }
+  }
+  function effects(dt) {
+    fxList = fxList.filter(e => { e.t += dt; const k = Math.min(1, e.t / 1.3); e.mesh.scale.setScalar(0.6 + k * 1.8); e.mesh.material.opacity = 0.55 * (1 - k); if (k >= 1) { world && world.remove(e.mesh); e.mesh.geometry.dispose(); e.mesh.material.dispose(); return false; } return true; });
+  }
+  const objOf = key => pickables.find(o => o.userData.item && o.userData.item.key === key) || null;
+  /* a storm question was answered: the villagers defend that building (or the storm reaches it) */
+  function defend(key, ok, line) {
+    if (!open_) return; const o = objOf(key);
+    if (line) say((ok ? "🛡️ " : "💨 ") + line, 2100);
+    if (!o) return;
+    focus(o, 26);
+    setTimeout(() => {
+      if (!open_ || !world) return;
+      const p = new THREE.Vector3(o.position.x, 0.8, o.position.z);
+      if (ok) {
+        const dome = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x7fe8ff, transparent: true, opacity: 0.55, depthWrite: false }));
+        dome.position.set(o.position.x, 0, o.position.z); world.add(dome); fxList.push({ mesh: dome, t: 0 });
+        fx.emit(p, { n: 26, colors: [0x9ff3ff, 0xffffff, 0xffd23f], speed: 3, up: 4, size: 0.14 }); sfx("zap"); bounce(o);
+      } else { fx.emit(new THREE.Vector3(o.position.x, 1.6, o.position.z), { n: 18, colors: [0x6a6f7a, 0x9a8466, 0x2f7fe0], speed: 2.5, up: 2, size: 0.16 }); stage.shake(0.25); sfx("crack"); }
+    }, reducedMotion ? 50 : 650);
+  }
+  function refresh() { if (!open_) return; showInfo(null); build(valleyModel(S())); }
+  function showTarp(key) { const o = objOf(key); if (o) showInfo(o); }
   addEventListener("keydown", e => { if (open_ && e.key === "Escape") { if (info) showInfo(null); else close_(); } });
 
-  return { open, close: close_, news, model: () => valleyModel(S()), get isOpen() { return open_; }, get stage() { return stage; }, get pickables() { return pickables; }, showInfo };
+  return { open, close: close_, news, refresh, weather, defend, say, showTarp, setStorms: s => (storms = s), get reduced() { return reducedMotion; }, model: () => valleyModel(S()), get isOpen() { return open_; }, get stage() { return stage; }, get pickables() { return pickables; }, showInfo };
 }
