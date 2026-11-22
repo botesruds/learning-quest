@@ -28,7 +28,7 @@ const K = (x, z) => x + "," + z;
 /* a small binary heap for Dijkstra */
 function heap() { const a = []; return { push(n, p) { a.push([p, n]); let i = a.length - 1; while (i) { const j = (i - 1) >> 1; if (a[j][0] <= a[i][0]) break; [a[i], a[j]] = [a[j], a[i]]; i = j; } }, pop() { const top = a[0], last = a.pop(); if (a.length) { a[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < a.length && a[l][0] < a[m][0]) m = l; if (r < a.length && a[r][0] < a[m][0]) m = r; if (m === i) break; [a[i], a[m]] = [a[m], a[i]]; i = m; } } return top[1]; }, get size() { return a.length; } }; }
 
-export function createNight({ stage, fx, fort, island, save, prog, ui, toast, onMorning, onLeave, hud }) {
+export function createNight({ stage, fx, fort, island, save, prog, cards, ui, toast, onMorning, onLeave, hud }) {
   const { scene, camera } = stage;
   const S = () => save.state;
   let N = null;            // the running night
@@ -80,7 +80,9 @@ export function createNight({ stage, fx, fort, island, save, prog, ui, toast, on
     const checks = shuffle(tp.t.checks || []).slice(0, 4);
     // patrol runes: 2 earlier mastered days (an easily confused day first, when the pack names one), else today
     const pat = patrolDays(key, 2);
-    const quick = pat.length ? pat.map(k => ({ type: "quick", obj: pick(prog.topic(k).t.gen)(), key: k, patrol: true }))
+    const due = cards ? cards.nightPicks(key, tp.pack, 2) : [];   // review cards that are due come first (the armoury)
+    const quick = due.length ? due.map(c => ({ type: "quick", obj: c.maker(), key: c.key, patrol: true, card: c.id })).concat(pat.filter(k => !due.some(c => c.key === k)).slice(0, 2 - due.length).map(k => ({ type: "quick", obj: pick(prog.topic(k).t.gen)(), key: k, patrol: true })))
+      : pat.length ? pat.map(k => ({ type: "quick", obj: pick(prog.topic(k).t.gen)(), key: k, patrol: true }))
       : (tp.t.gen || []).length ? [0, 1].map(() => ({ type: "quick", obj: pick(tp.t.gen)(), key })) : [];
     // the 4 Brain check runes, with the 2 quick runes at random places among them (never first, never side by side)
     const runes = checks.map(c => ({ type: "brain", obj: c, key }));
@@ -379,7 +381,7 @@ export function createNight({ stage, fx, fort, island, save, prog, ui, toast, on
       card.append(body);
     } else {
       const q = r.obj; window.__fdq = { type: "own", obj: q };
-      const qc = QuestionCard(q, "own", res => { prog.record(r.key, res); result = res === "own" ? "right" : res === "help" ? "half" : "wrong"; sfx(result === "wrong" ? "wrong" : "correct"); }, resume);
+      const qc = QuestionCard(q, "own", res => { prog.record(r.key, res); if (r.card && cards) cards.answer(r.card, res, { q: q.q }); result = res === "own" ? "right" : res === "help" ? "half" : "wrong"; sfx(result === "wrong" ? "wrong" : "correct"); }, resume);
       qc.prepend(h("div", { class: "eyebrow" }, label));
       card.append(qc);
     }

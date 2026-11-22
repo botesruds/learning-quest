@@ -9,6 +9,9 @@ import { createProgress } from "./progress.js";
 import { createDay } from "./day.js";
 import { createNight } from "./night.js";
 import { createLibrary } from "./library.js";
+import { createCards } from "./cards.js";
+import { createPatrol } from "./patrol.js";
+import { createReport } from "./report.js";
 import { createScribe } from "./scribe.js";
 import { createValley } from "./valley.js";
 import { MATS, PIECES } from "./pieces.js";
@@ -35,7 +38,7 @@ stage.onFrame((dt, t) => live.forEach(o => o.userData.update && o.userData.updat
 const addLive = o => { if (o.userData.update) live.add(o); scene.add(o); return o; };
 
 let keep = null, heroObj = null, petObj = null, bannerG = null, bannerN = -1;
-let island = null, water = null, sceneryG = null, lookNow = 1, fort = null, builder = null, prog = null, day = null, night = null, library = null, scribe = null, valley = null;
+let island = null, water = null, sceneryG = null, lookNow = 1, fort = null, builder = null, prog = null, day = null, night = null, library = null, scribe = null, valley = null, cards = null, patrol = null, report = null;
 function buildWorld(region = 1) {
   const L = REGION_LOOK[region];
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -168,8 +171,14 @@ function dawnScreen() {
   if (day && day.isOpen) day.close("nav");
   stage.setShift(0, 0); rig.autoSpin = 0.03; stage.flyTo(DAWN_VIEW, 1.4);
   const cur = prog.currentNode();
-  let main, sub = "";
-  if (cur.t === "level" && !cur.repair && prog.nextPhase(cur.key) === "brain") {
+  let main, sub = "", skip = null;
+  const due = cards ? cards.patrolWaiting() : 0;
+  if (due) {
+    // the morning patrol comes first: today's review cards from every subject (the day can still be played)
+    main = h("button", { class: "btn pulse go-day patrolbtn", type: "button", onclick: () => { sfx("whoosh"); patrol.openPatrol(); } }, `🛡️ Patrol first: ${due} card${due > 1 ? "s" : ""}`);
+    sub = `Check the weapons in your armoury: ideas you already know. About ${Math.max(2, Math.round(due * 0.7))} minutes.`;
+    skip = h("button", { class: "link skip-patrol", type: "button", onclick: () => { sfx("click"); patrol.skipPatrol(); dawnScreen(); } }, "Skip the patrol for today");
+  } else if (cur.t === "level" && !cur.repair && prog.nextPhase(cur.key) === "brain") {
     const tp = prog.topic(cur.key);
     main = h("button", { class: "btn pulse go-day night", type: "button", onclick: () => startNight(cur.key) }, `🌙 Night of Day ${prog.dayNo(cur.key)}: ${tp.t.short}`);
     sub = "⭐⭐ so far. Build your defences, then face the night. The Brain check is in the runes.";
@@ -191,10 +200,11 @@ function dawnScreen() {
   const grew = vn && vn.n > 0 ? h("p", { class: "vgrew" }, `🏡 Your valley grew: ${vn.n} new building${vn.n > 1 ? "s" : ""}!`, h("button", { class: "btn small", type: "button", onclick: () => { sfx("whoosh"); valley.open(); } }, "See it"))
     : vn && vn.first ? h("p", { class: "vgrew" }, "🏡 Everything you've learned has built a valley!", h("button", { class: "btn small", type: "button", onclick: () => { sfx("whoosh"); valley.open(); } }, "See it")) : null;
   const card = h("div", { class: "dawn panel fade-in" },
-    h("p", { class: "dsub" }, sub), main, grew,
+    h("p", { class: "dsub" }, sub), main, skip, grew,
     h("div", { class: "drow" },
       h("button", { class: "btn small blue", type: "button", onclick: () => { sfx("click"); rig.autoSpin = 0; stage.flyTo(BUILD_VIEW, 1.2); buildScreen(); } }, "🔨 Build"),
       h("button", { class: "btn small plain", type: "button", onclick: () => { sfx("click"); day.openMap(); } }, "📜 Quest map"),
+      h("button", { class: "btn small plain rpbtn", type: "button", onclick: () => { sfx("click"); report.openReport(); } }, "📊 Report"),
       valley ? h("button", { class: "btn small plain valleybtn", type: "button", onclick: () => { sfx("click"); valley.open(); } }, "🏡 Valley", vNew ? h("i", { class: "dot", "aria-label": "something new" }) : null) : null,
       h("button", { class: "btn small plain", type: "button", onclick: () => { sfx("click"); day.openShop(); } }, "🛡️ Hero shop"),
       library && library.has() ? h("button", { class: "btn small plain libbtn" + (library.news() ? " new" : ""), type: "button", onclick: () => { sfx("click"); library.open(); } }, "📚 Library", library.news() ? h("i", { class: "dot", "aria-label": "something new" }) : null) : null,
@@ -315,15 +325,19 @@ function demoFort() {
     onFixTopic: key => { fort.crackList().filter(c => c.topic === key).forEach(c => fort.fixCrack(c.cell)); save.commit(); },
     onClose: why => { if (why === "stop") { stopMusic(); stage.flyTo(TITLE_VIEW, 1.4); setTimeout(() => (rig.autoSpin = 0.05), 1400); titleScreen(); toast("Great work today, Commander. Your fort is saved and waiting."); } else if (afterParent) { const w = afterParent; afterParent = null; if (w === "title") titleScreen(); else dawnScreen(); } else if (why !== "build" && why !== "nav" && why !== "night") dawnScreen(); } });
   library = createLibrary({ save, prog, day, toast, onChange: () => {} });
+  cards = createCards(S, () => save.commit(), prog);
+  patrol = createPatrol({ save, prog, cards, day, toast });
+  report = createReport({ save, prog, cards, day, patrol, toast });
+  day.setReport && day.setReport(report);
   scribe = createScribe({ save, prog, day, toast, onChange: () => {} });
   day.addParentSection((dots, when, repaint) => scribe.has() ? scribe.parentSection(dots, when, repaint) : null);
   valley = createValley({ ui, h, save, prog, day, library, scribe, toast, sfx, mainStage: stage, onClose: () => { if (inGame) dawnScreen(); else titleScreen(); } });
-  night = createNight({ stage, fx, fort, island, save, prog, ui, toast, hud, onMorning: r => day.morning(r), onLeave: () => { playMusic("day"); dawnScreen(); } });
+  night = createNight({ stage, fx, fort, island, save, prog, cards, ui, toast, hud, onMorning: r => day.morning(r), onLeave: () => { playMusic("day"); dawnScreen(); } });
   showRegion(regionNow());
   titleScreen();
   const wake = () => { if (unlockAudio() && S().music && !builder.selected) playMusic("title"); removeEventListener("pointerdown", wake); };
   addEventListener("pointerdown", wake);
   if (new URLSearchParams(location.search).has("valley")) { inGame = true; unlockAudio(); valley.open(); }   // the home page's Valley card
   if (DEV && save.practice) bench();   // the test bench never touches a real save
-  window.__fd = { stage, save, fx, fort, builder, prog, day, night, library, scribe, valley, THREE, dawnScreen, startNight, startSiege, demoFort, setLook, dressHero, showRegion, visitFort };
+  window.__fd = { stage, save, fx, fort, builder, prog, day, night, library, scribe, valley, cards, patrol, report, THREE, dawnScreen, startNight, startSiege, demoFort, setLook, dressHero, showRegion, visitFort };
 })();
