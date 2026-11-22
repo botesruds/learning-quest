@@ -132,9 +132,21 @@ function checkAns(spec,input){
     if(spec.noBr && /[()]/.test(s)) return {ok:false,close:true,msg:"That's equal, but the brackets should be gone."};
     return {ok:true};
   }
-  if("words" in spec){ const low=s.toLowerCase(); return {ok:spec.words.some(w=>low===w.toLowerCase())}; }
+  if("words" in spec){
+    /* key words: small spelling slips are fine (one letter wrong in a short word, two in a long one); the right spelling is shown */
+    const norm=t=>String(t).toLowerCase().replace(/[^a-z0-9 ]+/g," ").replace(/\b(the|a|an)\b/g," ").replace(/\s+/g," ").trim();
+    const got=norm(s);
+    for(const w of spec.words){ const want=norm(w); if(got===want||got===want+"s"||got+"s"===want) return {ok:true};
+      const d=lev(got,want), allow=want.length>=8?2:want.length>=4?1:0; if(d<=allow) return {ok:true,spell:spec.words[0]}; }
+    return {ok:false};
+  }
   return {ok:false};
 }
+
+/* edit distance where swapping two neighbouring letters ("tednon") counts as one slip */
+function lev(a,b){ const m=a.length,n=b.length; if(Math.abs(m-n)>2) return 9; let pp=null, prev=Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){ const cur=[i]; for(let j=1;j<=n;j++){ cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+      if(pp&&i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1]) cur[j]=Math.min(cur[j],pp[j-2]+1); } pp=prev; prev=cur; } return prev[n]; }
 
 /* ================= speech ================= */
 function speakable(txt){
@@ -152,4 +164,4 @@ function checkEq(want,got){
   const ok=equiv(`(${a})-(${b})`,`(${c})-(${d})`)||equiv(`(${a})-(${b})`,`(${d})-(${c})`);
   return {ok};
 }
-export { h, H, ri, pick, shuffle, nz, MINUS, N, P, sgn, co, lin, terms, esc, M, gcd, tokenize, parse, evalT, varsOf, stripLHS, numVal, equiv, topTerms, isSimplified, checkAns, speakable, say, SayBtn, checkEq };
+export { lev, h, H, ri, pick, shuffle, nz, MINUS, N, P, sgn, co, lin, terms, esc, M, gcd, tokenize, parse, evalT, varsOf, stripLHS, numVal, equiv, topTerms, isSimplified, checkAns, speakable, say, SayBtn, checkEq };

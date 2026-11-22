@@ -57,7 +57,14 @@ export default {
 }
 ```
 
-Answers can be `{ num: 7 }`, `{ expr: "2n+3", simp: true }`, `{ choice: [...], ans: 0 }` or `{ words: ["cell wall"] }`.
+Answers can be `{ num: 7 }`, `{ expr: "2n+3", simp: true }`, `{ choice: [...], ans: 0 }` or `{ words: ["cell wall"] }`
+(key words forgive a small spelling slip and then show the right spelling). For pictures and cards there are also:
+
+- `{ tap: { pic: () => svg, ans: "nucleus", name: "nucleus" } }`: tap the right part of a picture. The svg marks each part with `data-part="..."`.
+- `{ sort: { bins: ["Plant only", "Both"], items: [["Nucleus", 1], ["Cell wall", 0]] } }`: put each card in its group, then Check.
+- `{ order: ["first", "second", "third"] }`: tap the cards in the right order, then Check (they are shown shuffled).
+
+A question with no `steps` still gets a 💡 hint in Train if its `final` has a `hint`.
 The parser accepts numbers, letters, + − × ÷, brackets and ², so `2(n + 3)` and `2n + 6` both match `{ expr: "2n+6" }`.
 
 ### Understanding questions
@@ -78,6 +85,15 @@ Choices are shuffled when shown, so put the right one first if you like. Wrong a
 - Loot for answers (wood, stone, iron, crystal for understanding, a tower plan for 3 in a row), land that grows with mastery,
   scout reports, the quest map, badges, saving to the family cloud, and (from Stage 4/5) the night battle, weak spots,
   demon lords and repairs.
+
+## Subjects
+
+Each pack is its own subject track with its own quest map, lands, forts, demon lords and final boss. Materials, gold, tower plans,
+the hero and badges are shared. The home page opens a pack with `?subject=<subject or pack id>`, for example
+`games/fort-defence/?subject=science`; with no subject the first pack (maths) plays. Give each region its own `look` number
+(maths uses 1 to 5, science 6 to 10) so each land gets its own fort; add the look's colours in `js/models.js` (REGION_LOOK, REGION_DEMON,
+LORDS, makeKeep) and `js/pieces.js` (STYLES). Prefix a pack's badge keys with its keyPrefix (`"sci2:l4"`, `"sci2:w1"`) so they never
+clash with another pack's. The final boss is saved under the keyPrefix + `"final"`.
 
 ## Adding a pack
 

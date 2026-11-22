@@ -104,7 +104,7 @@ export function createNight({ stage, fx, fort, island, save, prog, ui, toast, on
       ck.forEach((x, i) => items.splice(i ? 6 : 2, 0, { type: "brain", obj: x.c, key: x.key }));
     }
     const need = lord.need || (fin ? 13 : 8);
-    N = { siege: true, fin, pack, region: R, lord, lordKey: fin ? "final" : prog.lordKey(pack, R), need, hits: 0, wrong: new Set(),
+    N = { siege: true, fin, pack, region: R, lord, lordKey: prog.bossKey(node), need, hits: 0, wrong: new Set(),
       key: items[0] && items[0].key, tp: { t: { short: cap(lord.name) } }, runes: items, seg: -1, segT: 0, spawnQ: [], demons: [], shots: [], fx: [], time: 0,
       frozen: false, rune: null, runeReady: false, runeDone: true, brain: { right: 0, total: items.filter(i => i.type === "brain").length },
       kills: 0, bumps: 0, gold: 0, crystal: 0, cracks: [], strength: fin ? 2.2 : 1.5 + (R.n || 1) * 0.15, wave: 0, look: R.look || R.n };
@@ -373,7 +373,7 @@ export function createNight({ stage, fx, fort, island, save, prog, ui, toast, on
   function finishSiege() {
     const won = N.hits >= N.need, prev = S().bosses[N.lordKey] || {};
     S().bosses[N.lordKey] = { won: !!prev.won || won, best: Math.max(prev.best || 0, N.hits), t: Date.now() };
-    if (N.fin) { S().exams = S().exams || []; S().exams.push({ t: Date.now(), score: N.hits, total: N.runes.length, wrong: [...N.wrong] }); }
+    if (N.fin) { S().exams = S().exams || []; S().exams.push({ t: Date.now(), pack: N.pack.id, score: N.hits, total: N.runes.length, wrong: [...N.wrong] }); }
     const r = { siege: true, fin: N.fin, won, lord: N.lord, region: N.region, pack: N.pack, hits: N.hits, need: N.need, total: N.runes.length, wrong: [...N.wrong],
       kills: N.kills, bumps: N.bumps, gold: N.gold + (won ? (N.fin ? 300 : 100) : 0), crystal: N.crystal, cracks: N.cracks.slice() };
     S().gold += r.gold;

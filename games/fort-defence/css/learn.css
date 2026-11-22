@@ -214,3 +214,33 @@ body.sheet-open #ui{display:none}
 .pc-st{white-space:nowrap}
 .pc-check{display:flex;gap:6px;align-items:center;font-size:.92rem}
 .pc-how p{margin:6px 0}
+
+/* ---- science packs: pictures you tap, cards you sort, cards you put in order ---- */
+.sheet .sci{display:block;width:100%;max-width:440px;height:auto;margin:0 auto}
+.sheet .sci text{font:700 13px var(--f-display);fill:var(--ink)}
+.sheet .sci .lbl{font-size:12px}
+.sheet .tappic .sci [data-part]{cursor:pointer;transition:filter .15s, opacity .15s}
+.sheet .tappic .sci [data-part]:hover,.sheet .tappic .sci [data-part]:focus{filter:brightness(1.12) drop-shadow(0 0 3px #2b6fd6);outline:none}
+.sheet .tappic .sci .tap-ok{filter:drop-shadow(0 0 5px #1C8548) brightness(1.1);stroke:#1C8548 !important;stroke-width:4px !important}
+.sheet .tappic .sci .tap-no{filter:drop-shadow(0 0 5px #BF342C);opacity:.55}
+.sheet .sortlist{display:flex;flex-direction:column;gap:8px}
+.sheet .sortrow{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--surface)}
+.sheet .sortrow.no{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 7%,var(--surface))}
+.sheet .sortrow.ok{border-color:var(--good)}
+.sheet .sortit{font-weight:700;flex:1 1 140px}
+.sheet .bins{display:flex;gap:6px;flex-wrap:wrap}
+.sheet .binb{border:1.5px solid var(--line);background:var(--surface-2);border-radius:999px;padding:6px 12px;min-height:40px;font:700 .9rem var(--f-display);cursor:pointer}
+.sheet .binb.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.sheet .ordslot{min-height:52px;border:2px dashed var(--line);border-radius:12px;padding:8px 8px 8px 34px;margin:0;display:flex;flex-direction:column;gap:4px}
+.sheet .ordslot li{font-weight:700}
+.sheet .ordslot.ok{border-color:var(--good);border-style:solid}
+.sheet .ordslot.no{border-color:var(--bad)}
+.sheet .ordtray{display:flex;flex-wrap:wrap;gap:8px}
+.sheet .ordt{border-radius:10px;padding:8px 12px;background:#fff3cf;border:2px solid #e8c766;box-shadow:0 3px 0 #d9b44a;min-height:44px;font:700 .95rem var(--f-display);cursor:pointer;text-align:left}
+.sheet .ordt:disabled{opacity:.3;box-shadow:none;cursor:default}
+.sheet .simbox{display:flex;flex-direction:column;gap:10px;align-items:center}
+.sheet .simbox .row{justify-content:center}
+.sheet .pulse-time{font:800 2.4rem var(--f-display);text-align:center}
+.sheet table.sci-t{border-collapse:collapse;width:100%;font-size:.95rem}
+.sheet table.sci-t td,.sheet table.sci-t th{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+.sheet table.sci-t th{background:var(--surface-2)}

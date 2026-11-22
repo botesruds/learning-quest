@@ -72,14 +72,17 @@ function AnswerBox(spec,label,onOk,onWrong,onReveal,opts={}){
     const opts2=h("div",{class:"opts"+(spec.choice.some(c=>c.length>16)?" col":"")});
     spec.choice.forEach((c,k)=>opts2.append(h("button",{class:"opt",type:"button",onclick:e=>{ const b=e.currentTarget;
       if(k===spec.ans){ b.classList.add("ok"); opts2.querySelectorAll("button").forEach(x=>x.disabled=true); fb.replaceChildren(); onOk(tries); }
-      else { b.classList.add("no"); b.disabled=true; tries++; onWrong&&onWrong(tries,fb); if(tries>=max){ opts2.children[spec.ans].classList.add("ok"); opts2.querySelectorAll("button").forEach(x=>x.disabled=true); onReveal&&onReveal(fb); } } }},c)));
+      else { b.classList.add("no"); b.disabled=true; tries++; onWrong&&onWrong(tries,fb); if(tries>=max){ opts2.children[spec.ans].classList.add("ok"); opts2.querySelectorAll("button").forEach(x=>x.disabled=true); onReveal&&onReveal(fb,tidy(spec.choice[spec.ans])); } } }},c)));
     el.append(opts2,fb); return el;
   }
+  if(spec.tap) return TapAnswer(spec,el,fb,onOk,onWrong,onReveal,max);
+  if(spec.sort) return SortAnswer(spec,el,fb,onOk,onWrong,onReveal,max);
+  if(spec.order) return OrderAnswer(spec,el,fb,onOk,onWrong,onReveal,max);
   const inp=h("input",{class:"ans",type:"text",autocomplete:"off",spellcheck:"false","aria-label":"Answer"});
   const btn=h("button",{class:"btn primary",type:"button"},"Check");
   const ans=spec.expr!=null? spec.expr.replace(/\^2/g,"²").replace(/-/g," − ").replace(/\+/g," + ").replace(/\*/g,"") : spec.num!=null? N(spec.num) : "";
   const doCheck=()=>{ const r=checkAns(spec,inp.value); if(r.empty) return;
-    if(r.ok){ inp.classList.remove("no"); inp.classList.add("ok"); inp.disabled=true; btn.disabled=true; fb.replaceChildren(); onOk(tries); return; }
+    if(r.ok){ inp.classList.remove("no"); inp.classList.add("ok"); inp.disabled=true; btn.disabled=true; fb.replaceChildren(); if(r.spell){ inp.value=r.spell; fb.className="verdict mid"; fb.textContent="Right! Check the spelling: "+r.spell; } onOk(tries); return; }
     inp.classList.add("no"); if(!r.close) tries++;
     if(r.msg){ fb.className="verdict mid"; fb.textContent=r.msg; }
     if(!r.close){ onWrong&&onWrong(tries,fb,r); if(tries>=max){ inp.value=ans; inp.disabled=true; btn.disabled=true; onReveal&&onReveal(fb,ans); } } };
@@ -87,6 +90,48 @@ function AnswerBox(spec,label,onOk,onWrong,onReveal,opts={}){
   el.append(h("div",{class:"ansrow"},inp,btn)); if(spec.expr!=null) el.append(SymKeys(inp)); el.append(fb);
   setTimeout(()=>{ try{ inp.focus({preventScroll:true}); }catch(e){} },30);
   return el;
+}
+/* ---------- picture and card answers (science packs) ----------
+   {tap:{pic, ans, parts?}}  tap the right part of a picture. pic() returns an svg whose clickable parts carry data-part="name".
+   {sort:{bins:[...], items:[[text, binIndex], ...]}}  put each card in the right group, then Check.
+   {order:[first, second, ...]}  tap the cards in the right order, then Check. */
+const tidy=t=>String(t).replace(/<[^>]+>/g,"");
+function TapAnswer(spec,el,fb,onOk,onWrong,onReveal,max){
+  const T=spec.tap, pic=T.pic(), wrap=h("div",{class:"tappic"},pic); let tries=0, done=false;
+  const parts=[...pic.querySelectorAll("[data-part]")];
+  parts.forEach(p=>{ p.setAttribute("tabindex","0"); p.setAttribute("role","button"); p.setAttribute("aria-label",p.getAttribute("data-name")||"a part");
+    const hit=()=>{ if(done) return; const nm=p.getAttribute("data-part");
+      if(nm===T.ans){ done=true; parts.filter(x=>x.getAttribute("data-part")===nm).forEach(x=>x.classList.add("tap-ok")); fb.replaceChildren(); onOk(tries); }
+      else { p.classList.add("tap-no"); setTimeout(()=>p.classList.remove("tap-no"),700); tries++; onWrong&&onWrong(tries,fb); if(!onWrong){ fb.className="verdict bad"; fb.textContent="Not that part. Look again."; }
+        if(tries>=max){ done=true; parts.filter(x=>x.getAttribute("data-part")===T.ans).forEach(x=>x.classList.add("tap-ok")); onReveal&&onReveal(fb,T.name||T.ans); } } };
+    p.addEventListener("click",hit); p.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); hit(); } }); });
+  el.append(h("div",{class:"small muted"},"👆 Tap the picture"),wrap,fb); return el;
+}
+function SortAnswer(spec,el,fb,onOk,onWrong,onReveal,max){
+  const S_=spec.sort, items=shuffle(S_.items.map((it,i)=>i)), pickd={}; let tries=0, done=false;
+  const rows=items.map(i=>{ const [txt]=S_.items[i];
+    const btns=S_.bins.map((b,k)=>h("button",{class:"binb",type:"button",onclick:()=>{ if(done) return; pickd[i]=k; row.classList.remove("no"); btns.forEach((x,j)=>x.classList.toggle("on",j===k)); }},b));
+    const row=h("div",{class:"sortrow"},h("span",{class:"sortit",html:txt}),h("span",{class:"bins"},...btns)); row._i=i; row._b=btns; return row; });
+  const check=h("button",{class:"btn primary",type:"button",onclick:()=>{ if(done) return;
+    if(items.some(i=>pickd[i]==null)){ fb.className="verdict mid"; fb.textContent="Put every card in a group first."; return; }
+    const bad=rows.filter(r=>pickd[r._i]!==S_.items[r._i][1]);
+    if(!bad.length){ done=true; check.disabled=true; rows.forEach(r=>r.classList.add("ok")); fb.replaceChildren(); onOk(tries); return; }
+    bad.forEach(r=>r.classList.add("no")); tries++; onWrong&&onWrong(tries,fb); if(!onWrong){ fb.className="verdict bad"; fb.textContent=`${bad.length} in the wrong group. Fix the red ones.`; }
+    if(tries>=max){ done=true; check.disabled=true; rows.forEach(r=>{ const k=S_.items[r._i][1]; r._b.forEach((x,j)=>x.classList.toggle("on",j===k)); r.classList.remove("no"); r.classList.add("ok"); }); onReveal&&onReveal(fb,"shown above"); } }},"Check");
+  el.append(h("div",{class:"sortlist"},...rows),check,fb); return el;
+}
+function OrderAnswer(spec,el,fb,onOk,onWrong,onReveal,max){
+  const O=spec.order, order=shuffle(O.map((t,i)=>i)), used=[]; let tries=0, done=false;
+  const slot=h("ol",{class:"ordslot"}), tray=h("div",{class:"ordtray"});
+  const paint=()=>{ slot.replaceChildren(...(used.length?used.map(i=>h("li",{html:O[i]})):[h("li",{class:"muted"},"Tap the cards in order")])); tray.querySelectorAll("button").forEach(b=>b.disabled=done||used.includes(+b.dataset.i)); };
+  order.forEach(i=>tray.append(h("button",{class:"ordt",type:"button","data-i":i,html:O[i],onclick:()=>{ used.push(i); paint(); }})));
+  const undo=h("button",{class:"btn small",type:"button",onclick:()=>{ if(!done){ used.pop(); paint(); } }},"↩ Undo");
+  const check=h("button",{class:"btn primary",type:"button",onclick:()=>{ if(done) return;
+    if(used.length<O.length){ fb.className="verdict mid"; fb.textContent="Use every card first."; return; }
+    if(used.every((v,k)=>v===k)){ done=true; slot.classList.add("ok"); undo.disabled=check.disabled=true; fb.replaceChildren(); paint(); onOk(tries); return; }
+    tries++; slot.classList.add("no"); setTimeout(()=>slot.classList.remove("no"),600); onWrong&&onWrong(tries,fb); if(!onWrong){ fb.className="verdict bad"; fb.textContent="Not quite in order. Undo and try again."; }
+    if(tries>=max){ done=true; used.length=0; O.forEach((t,k)=>used.push(k)); undo.disabled=check.disabled=true; paint(); onReveal&&onReveal(fb,"shown above"); } else { used.length=0; paint(); } }},"Check");
+  paint(); el.append(slot,tray,h("div",{class:"row"},undo,check),fb); return el;
 }
 function runSteps(q,body,done){
   let k=0, helped=false, revealed=false;
@@ -111,7 +156,7 @@ function runOwn(q,body,report){
   let switched=false;
   const box=AnswerBox(q.final.a,q.final.p,(tries)=>{ stepsBtn.remove(); area.append(h("div",{class:"verdict good",html:`<b>${tries?"Got it on the second try.":"Right, on your own!"}</b> ${q.why||""}`})); report(tries?"help":"own"); },
     (tries,fb)=>{ fb.className="verdict bad"; fb.textContent="Not quite. Try once more, or use steps."; },
-    (fb,ans)=>{ stepsBtn.remove(); fb.className="verdict mid"; fb.innerHTML=`<b>The answer is ${esc(ans)}.</b> ${q.why||""}`; report("wrong"); });
+    (fb,ans)=>{ stepsBtn.remove(); fb.className="verdict mid"; fb.innerHTML=`<b>The answer is ${esc(ans||"shown above")}.</b> ${q.why||""}`; report("wrong"); });
   stepsBtn.addEventListener("click",()=>{ if(switched) return; switched=true; area.replaceChildren(); box.remove(); stepsBtn.remove(); runSteps(q,area,(r)=>report(r==="steps"?"help":r==="help"?"help":"wrong")); });
   body.append(box,stepsBtn,area);
 }
@@ -177,4 +222,4 @@ function UnderstandCard(u, onResult, onNext, opts = {}) {
   return card;
 }
 
-export { LearnView, MiniQ, SymKeys, QuestionCard, AnswerBox, runSteps, runOwn, UnderstandCard, UQ_LABEL };
+export { TapAnswer, SortAnswer, OrderAnswer, LearnView, MiniQ, SymKeys, QuestionCard, AnswerBox, runSteps, runOwn, UnderstandCard, UQ_LABEL };

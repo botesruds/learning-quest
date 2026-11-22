@@ -7,7 +7,10 @@ const ARGS={args:['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ign
   const {PACKS}=await import('/games/fort-defence/packs/index.js'); const Q=await import('/games/fort-defence/js/qui.js'); const C=await import('/games/fort-defence/js/qcore.js');
   const box=document.createElement('div'); box.className='sheet'; box.style.cssText='position:fixed;left:0;top:0;width:700px;opacity:0;pointer-events:none'; document.body.append(box);
   const out={cards:0,gens:0,qs:0,checks:0,uq:0,previews:0,invest:0,fail:[]}; const F=(m)=>{ if(out.fail.length<40) out.fail.push(m); };
-  const selfCheck=(spec,where)=>{ if(spec.choice){ if(!(spec.ans>=0&&spec.ans<spec.choice.length)) F(where+' bad choice index'); return; }
+  const selfCheck=(spec,where)=>{ if(spec.choice){ if(!(spec.ans>=0&&spec.ans<spec.choice.length)) F(where+' bad choice index'); if(new Set(spec.choice).size!==spec.choice.length) F(where+' duplicate choices '+JSON.stringify(spec.choice)); return; }
+    if(spec.tap){ const pic=spec.tap.pic(); if(!pic.querySelector('[data-part="'+spec.tap.ans+'"]')) F(where+' picture has no part '+spec.tap.ans); return; }
+    if(spec.sort){ const S=spec.sort; if(!S.bins||S.bins.length<2||!S.items.length||S.items.some(([t,b])=>!t||!(b>=0&&b<S.bins.length))) F(where+' bad sort'); return; }
+    if(spec.order){ if(!(spec.order.length>=2)||new Set(spec.order).size!==spec.order.length) F(where+' bad order'); return; }
     const vals='num' in spec?[String(spec.num),C.N(spec.num)]:'expr' in spec?[spec.expr]:'words' in spec?[spec.words[0]]:null; if(!vals){ F(where+' unknown spec '+JSON.stringify(spec)); return; }
     vals.forEach(v=>{ const res=C.checkAns(spec,v); if(!res.ok) F(where+' rejects its own answer '+v+' '+JSON.stringify(spec)+' '+(res.msg||'')); }); };
   for(const pack of PACKS){

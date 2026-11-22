@@ -4,7 +4,7 @@
    - The next topic opens only when the one before has 3 stars (or the parent opened the region, or unlocked everything).
    - Demon-lord misses mark topics for repair; repairs come first, and every repair must pass before a rematch.
    Topic keys are the pack's keyPrefix + the topic id, so Algebra Quest's saves ("1".."23") carry straight over. */
-import { PACKS } from "../packs/index.js";
+import { PACKS, activePack } from "../packs/index.js";
 
 const BASE_BADGES = [
   { k: "star1", e: "⭐", n: "First Star", d: "Earn your first star" },
@@ -12,7 +12,7 @@ const BASE_BADGES = [
   { k: "fire", e: "🔥", n: "On Fire", d: "Play 3 days in a row" },
 ];
 
-export function createProgress(getS, commit) {
+export function createProgress(getS, commit, pack0 = activePack()) {
   const S = () => getS();
   const today = () => new Date().toISOString().slice(0, 10);
 
@@ -20,7 +20,8 @@ export function createProgress(getS, commit) {
   const topics = new Map();        // key -> { key, pack, region, t (the pack's topic object) }
   const road = [];                 // { t:"chest"|"level"|"lord"|"final", pack, region, key? }
   const regions = [];              // { pack, r (region object), key (e.g. "algebra-u3:1") }
-  PACKS.forEach(pack => {
+  // only the subject being played is on the road; every pack's topics can still be looked up
+  [pack0].forEach(pack => {
     const byId = new Map(pack.topics.map(t => [t.id, t]));
     pack.regions.forEach(r => {
       regions.push({ pack, r, key: pack.id + ":" + r.n });
@@ -32,11 +33,14 @@ export function createProgress(getS, commit) {
     // topics that are not on the road (like the practice exam) can still be looked up
     pack.topics.forEach(t => { const key = (pack.keyPrefix || "") + t.id; if (!topics.has(key)) topics.set(key, { key, pack, region: null, t }); });
   });
+  PACKS.filter(p => p !== pack0).forEach(pack => pack.topics.forEach(t => { const key = (pack.keyPrefix || "") + t.id; if (!topics.has(key)) topics.set(key, { key, pack, region: null, t }); }));
   const topic = key => topics.get(String(key));
   const keyOf = (pack, id) => (pack.keyPrefix || "") + id;
   const regionOf = key => topic(key) && topic(key).region;
   const chestKey = (pack, r) => (pack.keyPrefix || "") + r.n;
   const lordKey = (pack, r) => (pack.keyPrefix || "") + r.n;
+  const finalKey = pack => (pack.keyPrefix || "") + "final";     // Algebra Quest's stays "final"
+  const bossKey = n => n.t === "final" ? finalKey(n.pack) : lordKey(n.pack, n.region);
 
   /* ---- stars ---- */
   const L = key => S().lv[key] || (S().lv[key] = { stars: 0, train: false });
@@ -56,7 +60,7 @@ export function createProgress(getS, commit) {
     if (n.t === "chest") return !!S().chests[chestKey(n.pack, n.region)];
     if (n.t === "level") return stars(n.key) >= 3;
     if (n.t === "lord") { const b = S().bosses[lordKey(n.pack, n.region)]; return !!(b && b.won); }
-    if (n.t === "final") return !!(S().bosses.final && S().bosses.final.won);
+    if (n.t === "final") { const b = S().bosses[finalKey(n.pack)]; return !!(b && b.won); }
   }
   function nodeOpen(n) {
     if (n.t === "chest") return true;
@@ -67,7 +71,7 @@ export function createProgress(getS, commit) {
   }
   const lordReady = (pack, r) => r.topics.every(id => !S().repair[keyOf(pack, id)]);
   function currentNode() {
-    const rep = Object.keys(S().repair).filter(k => S().repair[k] && topic(k)).sort((a, b) => road.findIndex(n => n.key === a) - road.findIndex(n => n.key === b))[0];
+    const rep = Object.keys(S().repair).filter(k => S().repair[k] && road.some(n => n.key === k)).sort((a, b) => road.findIndex(n => n.key === a) - road.findIndex(n => n.key === b))[0];
     if (rep) return { ...road.find(n => n.key === rep), repair: true };
     return road.find(n => n.t !== "chest" && nodeOpen(n) && !nodeDone(n)) || road[road.length - 1];
   }
@@ -101,11 +105,11 @@ export function createProgress(getS, commit) {
   function checkBadges() {
     const got = [];
     if (totalStars() > 0) got.push(award("star1"));
-    PACKS.forEach(p => (p.badges || []).forEach(b => { const m = /^l(\d+)$/.exec(b.k); if (m && stars(keyOf(p, m[1])) >= 3) got.push(award(b.k)); }));
+    PACKS.forEach(p => (p.badges || []).forEach(b => { const m = /^(?:[a-z0-9]+:)?l(\d+)$/.exec(b.k); if (m && stars(keyOf(p, m[1])) >= 3) got.push(award(b.k)); }));
     if (streak() >= 3) got.push(award("fire"));
     return got.filter(Boolean);
   }
 
-  return { road, regions, topics, topic, keyOf, regionOf, chestKey, lordKey, L, stars, mastered, masteredCount, totalStars, giveStars,
+  return { pack: pack0, finalKey, bossKey, road, regions, topics, topic, keyOf, regionOf, chestKey, lordKey, L, stars, mastered, masteredCount, totalStars, giveStars,
     nodeDone, nodeOpen, lordReady, currentNode, nextPhase, dayNo, record, streak, award, checkBadges, allBadges };
 }

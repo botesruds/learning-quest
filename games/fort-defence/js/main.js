@@ -94,7 +94,7 @@ function setLook(region) {
   if (!REGION_LOOK[region] || region === lookNow) return;
   lookNow = region; const L = REGION_LOOK[region];
   island.userData.setLook(region); scenery(region);
-  water.material.color.set(L.water); water.material.emissive && water.material.emissive.set(L.lava ? 0xff4a00 : 0x000000); water.material.emissiveIntensity = L.lava ? 0.8 : 1;
+  water.material.color.set(L.water); water.material.emissive && water.material.emissive.set(L.lava ? (L.glow || 0xff4a00) : 0x000000); water.material.emissiveIntensity = L.lava ? 0.8 : 1;
 }
 const regionNow = () => { const n = prog.currentNode(); return n && n.region ? (n.region.look || n.region.n) : 1; };
 buildWorld(1);
@@ -138,7 +138,7 @@ function titleScreen() {
   if (save.practice) parts.push(h("div", { class: "banner" }, "Practice save: progress stays on this device only"));
   parts.push(h("div", { class: "title fade-in" },
     h("h1", { class: "logo" }, "Fort ", h("span", {}, "Defence")),
-    h("p", { class: "tag" }, "Algebra Quest · Letter Land"),
+    h("p", { class: "tag" }, prog.pack.title + " · " + prog.pack.unit),
     play));
   ui.replaceChildren(...parts);
   setTimeout(() => play.focus({ preventScroll: true }), 50);
@@ -178,7 +178,7 @@ function dawnScreen() {
   } else {
     const lord = cur.t === "final" ? cur.region.final : cur.region.lord;
     main = h("button", { class: "btn pulse go-day", type: "button", onclick: () => { if (cur.t === "lord" && !prog.lordReady(cur.pack, cur.region)) { toast("Repair the weak spots first."); return; } startSiege(cur); } }, `${cur.t === "final" ? "🐉" : "👹"} ${lord.name[0].toUpperCase() + lord.name.slice(1)}`);
-    const b = S().bosses[cur.t === "final" ? "final" : prog.lordKey(cur.pack, cur.region)];
+    const b = S().bosses[prog.bossKey(cur)];
     sub = b && b.won ? "You beat this demon lord! Fight again for practice and gold." : b ? `Best so far: ${b.best} hits. ${lord.need || 8} win. Your fort is ready!` : `Every day in ${cur.region.name} is mastered. The demon lord is coming! ${lord.need || 8} hits win.`;
   }
   const chest = prog.road.find(n => n.t === "chest" && !prog.nodeDone(n) && n.region === (cur.region || {}));
@@ -296,6 +296,7 @@ function demoFort() {
   fort = createFort({ scene, state: S, region: 1, island, onFrameObjects: live });
   builder = createBuilder({ stage, fort, fx, save, toast });
   prog = createProgress(S, () => save.commit());
+  document.title = "Fort Defence · " + prog.pack.subject;
   day = createDay({ save, prog, stage, toast, onLand: landCheck,
     onBuild: () => { rig.autoSpin = 0; stage.flyTo(BUILD_VIEW, 1.2); buildScreen(); },
     onNight: key => startNight(key),

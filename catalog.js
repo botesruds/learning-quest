@@ -9,6 +9,9 @@ window.CATALOG=[
     // retired: still playable from "For grown-ups", not shown to the player
     { id:"algebra-quest", title:"Algebra Quest", icon:"🗺️", path:"games/algebra-quest/", retired:true,
       blurb:"Unit 3, y not x? Five worlds of algebra, from patterns to equations." }
+  ]},
+  { subject:"Science", emoji:"🔬", color:"var(--c2)", games:[
+    { id:"fort-defence", title:"Fort Defence: Science", icon:"🦠", path:"games/fort-defence/?subject=science",
+      blurb:"Unit 2, How are we organised? Cells, bones and muscles. Same fort, new lands." }
   ]}
-  // { subject:"Science", emoji:"🔬", color:"var(--c2)", games:[ { id:"matter-quest", ... } ] },
 ];
