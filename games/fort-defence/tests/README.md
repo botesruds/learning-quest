@@ -17,6 +17,7 @@ so they never touch real progress. Screenshots are written to the folder you run
 | `node tests/seed-test.js` | A brand-new Fort Defence save copies Algebra Quest stars, lessons and coins (as gold) once, and never writes to the Algebra Quest save. |
 | `node tests/parent-test.js` | The parent corner on laptop and iPad: the grown-up sum, stars, recent answers, repairs and demon lords, "open this land now", "open every day" (two taps), back to the title or dawn, reload. |
 | `node tests/builder-test.js` | The fort builder with mouse and touch: drag, paint, upgrade, move, pick up, refund, decorations, land limits, camera, reload. |
+| `node tests/armoury-test.js` | The armoury (spaced review): seeding cards from existing progress (Day 1 at steel, a repair day at bronze for the forge, reviews spread over 10 days), the dawn "Patrol first" button, a 6-card patrol with a miss (rule card, one box down, a second chance that never moves it), reload mid-patrol, boxes moving up, Oliver's report (green/amber/red/grey, at most 2 reds, You are here, Practise now), the armoury rack, night patrol runes drawn from due cards, the grown-up "What he knows" page and the science tab. `SHOTS=dir/` saves screenshots. |
 
 In a container without a GPU, Chromium needs `--use-angle=swiftshader` (already set in the tests).
 

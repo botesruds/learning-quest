@@ -337,7 +337,7 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
     });
     set(h("div", { class: "stack" }, ...blocks));
   }
-  const open_ = key => { ctx = null; open(key); };
+  const open_ = (key, o) => { ctx = null; open(key, o); };
 
   /* the hero shop: gold buys a new look for the commander and a pet. Rewards only: nothing here opens a day. */
   function openShop() {
@@ -385,6 +385,9 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
         h("p", { class: "small muted" }, "This shows the subject being played. Open the other subject from the home page to see its progress."), h("p", {}, "Each day is one topic. ⭐ 1: the briefing and 3 step-by-step questions. ⭐ 2: 3 right on his own before 3 misses. ⭐ 3: the Brain check at night, 3 of 4 'why' questions right. The next day only opens at 3 stars."),
         h("p", {}, "Each land ends with a demon lord: 8 quick questions plus 2 'why' questions, 8 hits to win. Every miss marks that day for repair, and he must pass its Challenge again before the rematch. The next land only opens after the lord is beaten. The final boss is the practice exam (13 of 16)."),
         h("p", { class: "row", style: "gap:6px;flex-wrap:wrap;align-items:center" }, "Recent answers: ", h("span", { class: "rdots" }, h("i", { class: "own" })), "on his own ", h("span", { class: "rdots" }, h("i", { class: "stp" })), "with steps ", h("span", { class: "rdots" }, h("i", { class: "hlp" })), "second try ", h("span", { class: "rdots" }, h("i", { class: "bad" })), "wrong"))];
+      if (report) parts.push(h("div", { class: "card small stack pc-know" }, h("b", {}, "📊 What he knows"),
+        h("p", { class: "small" }, "Every idea as green, amber or red, what is coming up next, his review cards (the armoury) and the questions he keeps missing."),
+        h("div", {}, h("button", { class: "btn small primary", type: "button", onclick: () => report.openGrown() }, "Open What he knows"))));
       prog.regions.forEach(({ pack, r }) => {
         const rows = prog.road.filter(n => n.pack === pack && n.region === r && n.t === "level").map(n => {
           const tp = prog.topic(n.key), st = prog.stars(n.key), rep = S().repair[n.key], seen = S().last[n.key];
@@ -424,5 +427,6 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
   /* the sheet's helpers, for other screens that live on the same sheet (the Library tower) */
   const kit = () => { if (!sheet) mountSheet(); ctx = { key: null, loot: {} }; paintLoot(); return { head, set, closeBtn, mission, celebrate, bigbtn, linkbtn, grant, lootbar }; };
 
-  return { kit, open: open_, openChest, openMap, openShop, openParentGate, openParent, openRepair, morning, close, grant, get isOpen() { return !!sheet; }, paintLoot };
+  let report = null; const setReport = r => { report = r; };
+  return { setReport, kit, open: open_, openChest, openMap, openShop, openParentGate, openParent, openRepair, morning, close, grant, get isOpen() { return !!sheet; }, paintLoot };
 }
