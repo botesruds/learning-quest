@@ -132,7 +132,7 @@ export function createLibrary({ save, prog, day, toast, onChange }) {
     const cur = curFloor(), un = unread();
     let next;
     if (cur && !F(cur.k).lesson) next = K.bigbtn(`${cur.icon} Floor ${cur.n}: learn to ${cur.name.toLowerCase()}`, () => lesson(cur));
-    else if (un.length) next = K.bigbtn(`📜 New dispatch: Day ${prog.dayNo(dkey(un[0]))}`, () => readDispatch(un[0]));
+    else if (un.length) next = K.bigbtn(`📜 New dispatch: ${prog.dayName(dkey(un[0]))}`, () => readDispatch(un[0]));
     else if (cur && fstars(cur.k) < 2) next = K.bigbtn(`${cur.icon} Floor ${cur.n} Challenge`, () => challenge(cur));
     else if (cur) next = K.bigbtn(`🧭 Floor ${cur.n}: mixed check`, () => mixed(cur));
     else next = h("p", { style: "font-weight:800" }, "🏆 Every floor is mastered! Read any dispatch again for loot.");
@@ -219,7 +219,7 @@ export function createLibrary({ save, prog, day, toast, onChange }) {
       if (first) S().gold += 20; save.commit(); onChange && onChange(); sfx("star");
       const more = unread()[0];
       K.set(K.celebrate(h("div", { class: "bigstars" }, own >= 3 ? "📜✨" : "📜"), h("h2", {}, `Dispatch read! ${own} of ${d.qs.length} on your own.`), h("p", {}, first ? "🪙 +20 gold for your first read." : "Great practice."),
-        more ? K.bigbtn(`📜 Next dispatch: Day ${prog.dayNo(dkey(more))}`, () => readDispatch(more)) : null, backBtn())); };
+        more ? K.bigbtn(`📜 Next dispatch: ${prog.dayName(dkey(more))}`, () => readDispatch(more)) : null, backBtn())); };
     K.set(h("div", { class: "stack" }, K.mission(`📜 A dispatch about Day ${no}. Read it (tap 🔊 to hear it, or tap an underlined word for its meaning), then answer the questions. Each question shows the strategy to use.`), progEl, area)); next();
   }
 

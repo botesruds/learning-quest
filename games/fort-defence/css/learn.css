@@ -418,3 +418,12 @@ body.sheet-open #ui{display:none}
 .sheet .rp-cl .s{font-size:.78rem;color:var(--muted)}
 .sheet .rp-cl.l-green{border-color:#2fbf4a}
 @media (max-width:520px){ .sheet .rp-crit{grid-template-columns:repeat(2,minmax(0,1fr))} }
+/* Expeditions, Stages 2 to 4: results table anomaly, the three graphs to pick from, and preformatted working */
+.sheet .xres td.xanom{background:#ffe0e0;font-weight:800;box-shadow:inset 0 0 0 2px #d84a4a}
+.sheet .xgraphs{display:grid;gap:10px}
+.sheet .xgraph{display:block;width:100%;text-align:left;background:#fff;border:3px solid #d9c48f;border-radius:14px;padding:8px;cursor:pointer;font:inherit}
+.sheet .xgraph svg{display:block;margin:4px auto 0;height:auto}
+.sheet .xgraph.ok{border-color:#2fa84a;box-shadow:0 0 0 3px #bfeac8}
+.sheet .xgraph.no{border-color:#d84a4a;opacity:.6}
+.sheet .xgraph:disabled{cursor:default}
+.sheet .xpre{margin:0;padding:8px 12px;background:#fffdf6;border:2px dashed #d9c48f;border-radius:10px;font:1.05rem/1.6 var(--f-body);white-space:pre-wrap}

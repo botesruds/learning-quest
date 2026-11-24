@@ -13,6 +13,7 @@
      If the coach can't be reached (or on a practice save), the piece waits on the desk for a grown-up.
    Save: S.wr = { fl: { floorKey: { stars, lesson } }, rp: { topicKey: { done, t } }, desk: [ pieces, newest last ] };
    practice answers go into S.hist under "wr:<floor>". */
+import { critOf, rungOf } from "./expedition.js";
 import { h, esc, shuffle, pick, SayBtn } from "./qcore.js";
 import { AnswerBox, LearnView } from "./qui.js";
 import { sfx } from "./audio.js";
@@ -310,6 +311,14 @@ export function createScribe({ save, prog, day, toast, onChange }) {
     K.set(h("div", { class: "stack" }, K.mission(`👑 A report for the King about Day ${no}. ${what} The fact card has the facts you need.`), Writer(o)));
   }
 
+  /* a Healer's Case paragraph the coach couldn't mark (or marked "not yet"): the grown-up's star counts it as done on his own */
+  function giveExp(p) {
+    const tp = prog.topic(p.exp), spec = tp && tp.t.exp; if (!spec || !p.expParts) return;
+    const c = critOf(S(), p.exp), parts = { ...p.expParts, [p.expItem || "write"]: "own" }, rung = rungOf(spec, parts);
+    if (rung > c.best) { c.best = rung; c.parts = parts; c.text = p.text || c.text; c.round = 3; c.r[2] = Math.max(c.r[2], rung + 1); }
+    if (rung >= 2) prog.giveStars(p.exp, 3);
+  }
+
   /* ---------------- the Writing desk (parent corner) ---------------- */
   function parentSection(dots, when, repaint) {
     const d = wr().desk, nSent = reports().filter(rDone).length;
@@ -319,7 +328,7 @@ export function createScribe({ save, prog, day, toast, onChange }) {
     const piece = p => {
       const st = { met: "✅ coach: met", notyet: "🔧 coach: not yet", waiting: "📮 waiting for you" }[p.status] || p.status;
       const ov = p.override ? (p.override === "give" ? " · ⭐ you gave the star" : " · you took the star back") : "";
-      const give = () => { p.override = "give"; if (p.floor) { const fl = F(p.floor); fl.stars = 3; fl.lesson = true; } if (p.report) { const rp = wr().rp[p.report] || (wr().rp[p.report] = {}); rp.done = true; rp.t = Date.now(); } save.commit(); onChange && onChange(); repaint(); };
+      const give = () => { p.override = "give"; if (p.exp) giveExp(p); if (p.floor) { const fl = F(p.floor); fl.stars = 3; fl.lesson = true; } if (p.report) { const rp = wr().rp[p.report] || (wr().rp[p.report] = {}); rp.done = true; rp.t = Date.now(); } save.commit(); onChange && onChange(); repaint(); };
       const take = () => { p.override = "take"; if (p.floor) { const fl = F(p.floor); fl.stars = Math.min(fl.stars, 2); } if (p.report && wr().rp[p.report]) wr().rp[p.report].done = false; save.commit(); onChange && onChange(); repaint(); };
       const earned = (p.status === "met" && p.override !== "take") || p.override === "give";
       return h("details", { class: "kitcard wdesk" }, h("summary", {}, `${when(p.t)} · ${p.title} · ${st}${ov}`),
@@ -337,5 +346,5 @@ export function createScribe({ save, prog, day, toast, onChange }) {
       ...d.slice().reverse().slice(0, 20).map(piece));
   }
 
-  return { open, news, has, curFloor, fstars, unwritten, reportLevel, parentSection, coach, task, report, lesson, challenge };
+  return { open, news, has, curFloor, fstars, unwritten, reportLevel, parentSection, coach, toDesk, task, report, lesson, challenge };
 }

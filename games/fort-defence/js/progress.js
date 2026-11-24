@@ -104,13 +104,16 @@ export function createProgress(getS, commit, pack0 = activePack()) {
     if (S().repair[key]) return "challenge";
     if (!S().learnDone[key]) return "learn";
     if (T.kind === "invest") return l.stars >= 3 ? "done" : T.exp ? "exp" : "invest";
+    if (T.kind === "exp") return l.stars >= 3 ? "done" : "exp";   // an Expedition day of its own: lesson, then the rounds
     if (!l.train) return "train";
     if (l.stars < 2) return "challenge";
     if (l.stars < 3) return T.exp ? "exp" : "brain";   // an Expedition day: the third star comes from its rounds
     return "done";
   }
   /* the day number shown to Oliver: the topic's place in its pack */
-  const dayNo = key => { const tp = topic(key); return tp ? tp.pack.topics.filter(t => !t.kind || t.kind !== "exam").findIndex(t => t.id === tp.t.id) + 1 : 0; };
+  /* Expedition days of their own (kind "exp") have no number, so the other days keep theirs; dayName says "Expedition" */
+  const dayNo = key => { const tp = topic(key); if (!tp) return 0; if (tp.t.kind === "exp") return "🧭"; return tp.pack.topics.filter(t => t.kind !== "exam" && t.kind !== "exp").findIndex(t => t.id === tp.t.id) + 1; };
+  const dayName = key => { const tp = topic(key); return tp && tp.t.kind === "exp" ? "Expedition" : "Day " + dayNo(key); };
 
   /* ---- answers and streaks ---- */
   /* o.conf (optional): the confidence tap, "sure" | "think" | "guess", kept with the answer */
@@ -135,5 +138,5 @@ export function createProgress(getS, commit, pack0 = activePack()) {
   }
 
   return { pack: pack0, finalKey, bossKey, road, regions, topics, topic, keyOf, regionOf, chestKey, lordKey, L, stars, mastered, masteredCount, totalStars, giveStars,
-    nodeDone, nodeOpen, lordReady, towerTodo, towerMigrate, bossDays, currentNode, nextPhase, dayNo, record, streak, award, checkBadges, allBadges };
+    nodeDone, nodeOpen, lordReady, towerTodo, towerMigrate, bossDays, currentNode, nextPhase, dayNo, dayName, record, streak, award, checkBadges, allBadges };
 }
