@@ -9,6 +9,7 @@ import { HEROES, PETS, makeHero, makePet } from "./models.js";
 import { objThumb } from "./thumbs.js";
 import { STRATEGIES } from "../packs/reading/strategies.js";
 import { SPWView, thinkState } from "./think.js";
+import { ExpeditionView } from "./expedition.js";
 
 /* what each kind of answer earns (see the design document) */
 export const LOOT = {
@@ -113,14 +114,15 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
     else if (ph === "challenge") challenge(key, o.replay);
     else if (ph === "brain") nightPrompt(key);
     else if (ph === "invest") invest(key);
+    else if (ph === "exp") expedition(key);
     else donePhase(key);
   }
 
   function paintHead(key, ph) {
     const tp = prog.topic(key);
     const T = tp.t, l = prog.L(key);
-    const list = T.kind === "invest" ? [["learn", "📖 Lesson"], ["invest", "🕵️ Investigate"]] : [["learn", "📖 Lesson"], ["train", "🏋️ Train"], ["challenge", "⚔️ Challenge"], ["brain", "🧠 Brain check"]];
-    const doneSet = new Set(); if (S().learnDone[key]) doneSet.add("learn"); if (l.train) doneSet.add("train"); if (l.stars >= 2) doneSet.add("challenge"); if (l.stars >= 3) { doneSet.add("brain"); doneSet.add("invest"); }
+    const list = T.kind === "invest" ? [["learn", "📖 Lesson"], T.exp ? ["exp", "🧭 Expedition"] : ["invest", "🕵️ Investigate"]] : [["learn", "📖 Lesson"], ["train", "🏋️ Train"], ["challenge", "⚔️ Challenge"], T.exp ? ["exp", "🧭 Expedition"] : ["brain", "🧠 Brain check"]];
+    const doneSet = new Set(); if (S().learnDone[key]) doneSet.add("learn"); if (l.train) doneSet.add("train"); if (l.stars >= 2) doneSet.add("challenge"); if (l.stars >= 3) { doneSet.add("brain"); doneSet.add("invest"); doneSet.add("exp"); }
     const R = tp.region;
     head([h("div", { class: "row", style: "justify-content:space-between;align-items:flex-start;gap:8px" },
       h("div", { style: "min-width:0;flex:1" }, h("div", { class: "eyebrow" }, `${R ? R.emoji + " " + R.name + " · " : ""}Day ${prog.dayNo(key)}`), h("h2", {}, T.title)),
@@ -290,9 +292,19 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
     set(fn(res => { const st = res.own >= 5 ? 3 : res.own >= 3 ? 2 : 1; prog.giveStars(key, st); if (st >= 3) return complete(key); open(key); }, tp.t.id, rec));
   }
 
+  /* an Expedition (criteria B, C, D): js/expedition.js runs the rounds and the ladder; stars only ever go up */
+  function expedition(key) {
+    const tp = prog.topic(key);
+    set(ExpeditionView(tp.t.exp, { key, S, commit: () => save.commit(), record: r => prog.record(key, r),
+      grant: r => grant(r === "own" ? LOOT.own : LOOT.help),
+      giveStars: n => { const g = prog.giveStars(key, n); if (g) { paintHead(key, "exp"); onChange && onChange(); } return g; },
+      stars: () => prog.stars(key), onMastered: () => complete(key), onExit: () => close("stop") }));
+  }
+
   function donePhase(key) {
     set(celebrate(h("div", { class: "bigstars" }, "⭐⭐⭐"), h("h2", {}, "Mastered!"), h("p", {}, "Play again to gather more loot, or read the briefing again."),
-      bigbtn(prog.topic(key).t.kind === "invest" ? "🕵️ New investigation" : "⚔️ Gathering run for loot", () => open(key, { ph: prog.topic(key).t.kind === "invest" ? "invest" : "challenge", replay: true })),
+      prog.topic(key).t.exp ? bigbtn("🧭 Expedition: play a round", () => open(key, { ph: "exp" })) : null,
+      prog.topic(key).t.exp && prog.topic(key).t.kind === "invest" ? null : bigbtn(prog.topic(key).t.kind === "invest" ? "🕵️ New investigation" : "⚔️ Gathering run for loot", () => open(key, { ph: prog.topic(key).t.kind === "invest" ? "invest" : "challenge", replay: true }), prog.topic(key).t.exp ? "plain" : undefined),
       bigbtn("📜 Read the briefing again", () => open(key, { ph: "learn", i: 0 }), "plain"),
       thinkReady(key) ? bigbtn("🧠 Think it through: sentence, phrase, word", () => thinkThrough(key, () => open(key)), "plain") : null,
       linkbtn("Back to the fort", () => close("x"))));

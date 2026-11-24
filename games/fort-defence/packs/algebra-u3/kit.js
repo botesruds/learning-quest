@@ -155,6 +155,10 @@ function stickSVG(kind,n,o={}){
     for(let i=0;i<n;i++){ const c=o.colour?["var(--xt)","var(--c2)"][i%2]:undefined;
       if(i%2===0){ const x=ox+i*L/2; s+=st(x,oy+hgt,x+L,oy+hgt,c)+st(x+L,oy+hgt,x+L/2,oy,c); }
       else { const x=ox+(i-1)*L/2+L/2; s+=st(x,oy,x+L,oy,c)+st(x+L,oy,x+L/2,oy+hgt,c); } } }
+  else if(kind==="hex"){ const w=L*Math.sqrt(3)/2, cy=oy+L; W=ox*2+n*2*w; hh=oy*2+2*L;   // pointy-top hexagons in a row, sharing upright sides
+    s+=st(ox,cy-L/2,ox,cy+L/2,first);
+    for(let i=0;i<n;i++){ const x=ox+i*2*w, c=o.colour?["var(--xt)","var(--c2)"][i%2]:undefined;
+      s+=st(x,cy-L/2,x+w,cy-L,c)+st(x+w,cy-L,x+2*w,cy-L/2,c)+st(x+2*w,cy-L/2,x+2*w,cy+L/2,c)+st(x+2*w,cy+L/2,x+w,cy+L,c)+st(x+w,cy+L,x,cy+L/2,c); } }
   else if(kind==="sq2"){ W=ox*2+n*L; hh=oy*2+2*L;
     s+=st(ox,oy,ox,oy+L,first)+st(ox,oy+L,ox,oy+2*L,first);
     for(let i=0;i<n;i++){ const x=ox+i*L, c=o.colour?["var(--xt)","var(--c2)"][i%2]:undefined; s+=st(x,oy,x+L,oy,c)+st(x,oy+L,x+L,oy+L,c)+st(x,oy+2*L,x+L,oy+2*L,c)+st(x+L,oy,x+L,oy+L,c)+st(x+L,oy+L,x+L,oy+2*L,c); } }

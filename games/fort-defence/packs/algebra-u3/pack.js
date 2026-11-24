@@ -2,6 +2,12 @@
    Everything the engine needs to know about this unit is listed here. See packs/README.md for the format. */
 import { STEPS, PREVIEWS, EXAM_STEPS, BADGES, Investigation } from "./topics.js";
 import { UNDERSTANDING } from "./understanding.js";
+import { PATTERN_EXPEDITION, PATTERN_CHECKS } from "./expedition.js";
+
+/* day 21 is now the Pattern Expedition (js/expedition.js): three rounds, a rung ladder, and review cards */
+const T21 = STEPS.find(t => t.id === 21);
+T21.exp = PATTERN_EXPEDITION; T21.checks = PATTERN_CHECKS;
+T21.learn[1] = { t: "show", h: "How the Expedition works", b: `<p>Three rounds, each with a new pattern. <b>Guided</b> shows you a finished example first and goes one small step at a time. <b>Hints</b> gives bigger steps, with a hint only if you ask. <b>On your own</b> is like the real task, and you build the write-up yourself.</p><p>After each round you'll see a ladder from 1 to 2 up to 7 to 8, so you know what your teacher is looking for.</p>`, rule: "Rung 5 to 6 on your own wins 3 stars." };
 
 export default {
   id: "algebra-u3",
@@ -14,7 +20,9 @@ export default {
   previews: PREVIEWS,            // scout reports (treasure chests), keyed by region number
   understanding: UNDERSTANDING,  // new understanding questions, keyed by topic id
   badges: BADGES,                // { k, e, n, d }: "l7" = master topic 7, "w1" = beat region 1's demon lord, "final" = beat the final boss
-  special: { invest: Investigation },   // topics with kind:"invest" are played by this function
+  special: { invest: Investigation },   // the old walk-through, kept for reference; day 21 now plays its Expedition
+  // the four MYP criteria in Oliver's words (My Quest Report)
+  criteria: { A: "Know it and use it", B: "Find, describe, test, explain", C: "Show it so anyone can follow", D: "Use maths for real" },   // topics with kind:"invest" are played by this function
   // "I can" statements for the report card (drafted 22 Nov 2026 for Rudi to check; there is no official list)
   can: {
     1: "I can explain that a letter stands for a number we don't know yet",

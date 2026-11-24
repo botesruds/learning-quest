@@ -4,6 +4,7 @@
   --bg:#fffaf0; --surface:#FFFFFF; --surface-2:#f3ecdc; --ink:#1b2236; --muted:#6a6150; --line:#e2d6bd; --grid:rgba(0,0,0,0);
   --accent:#2b6fd6; --accent-ink:#FFFFFF; --accent-soft:#e3edfc;
   --good:#1C8548; --warn:#B07210; --bad:#BF342C; --grey:#9AA5B8;
+  --c1:#2E5FB8; --c2:#0B8577; --c3:#B4560F; --c4:#7A45C9; --c5:#BF3B5E;   /* Algebra Quest's pattern colours (the stick pictures needed them) */
   --xt:#2E7BD6; --yt:#16A07F; --x2t:#7A45C9; --one:#E3A21A; --neg:#D9483F;
   --f-display:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
@@ -388,3 +389,32 @@ body.sheet-open #ui{display:none}
 .sheet .mmlink.ok{color:#2e7d32;font-weight:700;font-style:italic}
 .sheet .mmlv{text-align:left}
 .sheet .mmgap{min-height:1px}
+
+/* Expeditions (js/expedition.js): criteria B, C and D practice in three rounds, with the rung ladder */
+.sheet .xpills{display:flex;gap:6px;flex-wrap:wrap}
+.sheet .xpill{border-radius:99px;padding:5px 12px;font-weight:700;font-size:.9rem;background:#f1e6cc;color:var(--muted)}
+.sheet .xpill.on{background:var(--blue,#2b6fd6);color:#fff}
+.sheet .xpill.done{background:#e4f3e3;color:var(--good)}
+.sheet .xpill.lock{opacity:.55}
+.sheet .xchips{display:flex;gap:6px;flex-wrap:wrap}
+.sheet .xchip,.sheet .xtag{display:inline-block;color:#fff;border-radius:8px;padding:3px 9px;font-weight:700;font-size:.85rem;white-space:nowrap}
+.sheet .xline{display:flex;gap:10px;align-items:flex-start;border:2px solid var(--line);border-radius:12px;padding:8px 10px;background:#fbfdff}
+.sheet .xline .xtag{margin-top:2px}
+.sheet .xitem{border-left:5px solid var(--sc,var(--accent));padding-left:12px}
+.sheet .card.xitem{border-left:5px solid var(--sc,var(--accent))}
+.sheet .card > .xitem + .xitem{margin-top:22px;padding-top:4px}
+.sheet .xladder{gap:8px}
+.sheet .xrung{display:flex;align-items:center;gap:12px;border:2px solid var(--line);border-radius:12px;padding:10px 14px;background:#fff}
+.sheet .xrung .xn{font:22px var(--f-game);min-width:72px}
+.sheet .xrung.here{border-color:var(--good);background:#eaf6ee;box-shadow:0 0 0 4px #c9ecd3}
+.sheet .xrung.here .xn{color:var(--good)}
+.sheet .xrung.above{border-style:dashed;opacity:.8}
+.sheet .xrung.below{background:#f7f3ea}
+/* the A B C D strip on My Quest Report */
+.sheet .rp-crit{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.sheet .rp-cl{border:2px solid var(--line);border-radius:12px;padding:8px 6px;text-align:center;background:#fff;cursor:pointer;font:inherit;color:inherit;display:flex;flex-direction:column;align-items:center;gap:3px}
+.sheet .rp-cl b.L{font:26px var(--f-game);line-height:1}
+.sheet .rp-cl .w{font-size:.8rem;font-weight:700;line-height:1.2}
+.sheet .rp-cl .s{font-size:.78rem;color:var(--muted)}
+.sheet .rp-cl.l-green{border-color:#2fbf4a}
+@media (max-width:520px){ .sheet .rp-crit{grid-template-columns:repeat(2,minmax(0,1fr))} }
