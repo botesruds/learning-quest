@@ -123,7 +123,7 @@ export function createNight({ stage, fx, fort, island, save, prog, cards, ui, to
   /* "Which idea is this?": tiles for the right day plus up to 3 other days he knows */
   function ideaTiles(key, pool) {
     const others = shuffle(pool.filter(k => k !== key)).slice(0, 3);
-    return shuffle([key, ...others]).map(k => ({ k, label: `Day ${prog.dayNo(k)}: ${prog.topic(k).t.short}` }));
+    return shuffle([key, ...others]).map(k => ({ k, label: `${prog.dayName(k)}: ${prog.topic(k).t.short}` }));
   }
 
   /* ---------- a demon lord's siege: the world boss, with Algebra Quest's rules ----------
@@ -391,7 +391,7 @@ export function createNight({ stage, fx, fort, island, save, prog, cards, ui, to
       const opts = h("div", { class: "opts col ideas" }, ...tiles.map(t => h("button", { class: "opt", type: "button", "data-k": t.k, onclick: e => {
         opts.querySelectorAll("button").forEach(b => (b.disabled = true)); const ok = t.k === r.key; e.currentTarget.classList.add(ok ? "ok" : "no"); opts.querySelector(`[data-k="${r.key}"]`).classList.add("ok");
         if (ok) { S().mats.crystal = (S().mats.crystal || 0) + 1; N.crystal++; save.commit(); sfx("correct"); fb.className = "verdict good"; fb.innerHTML = "<b>Yes! +1 💎</b> Knowing which idea to use is half the battle."; }
-        else { sfx("wrong"); const T0 = prog.topic(r.key).t; fb.className = "verdict mid"; fb.innerHTML = `<b>This one is Day ${prog.dayNo(r.key)}: ${esc(T0.short)}.</b> ${esc(T0.title)}. Now answer it.`; }
+        else { sfx("wrong"); const T0 = prog.topic(r.key).t; fb.className = "verdict mid"; fb.innerHTML = `<b>This one is ${prog.dayName(r.key)}: ${esc(T0.short)}.</b> ${esc(T0.title)}. Now answer it.`; }
         go.classList.remove("hide"); setTimeout(() => go.focus({ preventScroll: true }), 50); } }, t.label)));
       body.append(opts, fb, go); card.append(body); window.__fdq = { type: "pick", obj: { ans: r.key, q } };
       ov.append(card); document.body.append(ov); return;
@@ -480,7 +480,7 @@ export function createNight({ stage, fx, fort, island, save, prog, cards, ui, to
     if (!countEl || !countEl.isConnected) {
       countEl = h("span", { class: "chip nightcount", "aria-live": "polite" });
       const leave = h("button", { class: "chip icon", type: "button", "aria-label": "Leave the night", title: "Leave the night", onclick: () => confirmLeave() }, "◀");
-      const title = h("span", { class: "chip nighttitle" }, N.siege ? `⚔️ Siege: ${cap(N.lord.name)}` : `🌙 Night of Day ${prog.dayNo(N.key)}: ${N.tp.t.short}`);
+      const title = h("span", { class: "chip nighttitle" }, N.siege ? `⚔️ Siege: ${cap(N.lord.name)}` : `🌙 Night of ${prog.dayName(N.key)}: ${N.tp.t.short}`);
       runeBtn = h("button", { class: "btn runebtn", type: "button", onclick: tapRune }, "✨ Tap the rune!");
       ui.replaceChildren(hud([leave, title]), h("div", { class: "nightbar" }, countEl), h("div", { class: "grow" }), runeBtn);
     }

@@ -78,13 +78,15 @@ async function playRound(p, bad = [], shot) {
   let fdr = await p.evaluate(() => window.__fdr.crit);
   ok(/^green\|Rung 7 to 8/.test(fdr.B) && /^grey\|Coming up/.test(fdr.C) && /^grey\|Coming up/.test(fdr.D) && /^(green|amber)/.test(fdr.A), 'strip: ' + JSON.stringify(fdr));
   if (SHOTS) await p.screenshot({ path: SHOTS + 'x-report.png' });
-  await p.click('.sheet .rp-cl[data-crit="C"]'); await p.waitForTimeout(200);
+  // C is now an Expedition of its own (the Scribe's Slate): its cell opens its ladder too
+  await p.click('.sheet .rp-cl[data-crit="C"]'); await p.waitForSelector('.sheet .xladder');
+  await p.evaluate(() => __fd.report.openReport()); await p.waitForSelector('.sheet .rp-crit');
   await p.click('.sheet .rp-cl[data-crit="B"]'); await p.waitForSelector('.sheet .xladder');
   ok(/Best so far/.test(await p.locator('.sheet .xladder').textContent()), 'tapping B opens its ladder');
   if (SHOTS) await p.screenshot({ path: SHOTS + 'x-critladder.png' });
   await p.evaluate(() => __fd.report.openGrown()); await p.waitForSelector('.sheet .rp-critgrown');
   const g = await p.locator('.sheet .rp-critgrown').textContent();
-  ok(/B, Investigating patterns: band 7 to 8/.test(g) && /not school marks/.test(g) && /C, Communicating: no Expedition yet/.test(g), 'grown-up bands: ' + g.slice(0, 120));
+  ok(/B, Investigating patterns: band 7 to 8/.test(g) && /not school marks/.test(g) && /C, Communicating: not tried yet/.test(g), 'grown-up bands: ' + g.slice(0, 120));
   // reload keeps it
   await p.reload(); await p.waitForSelector('.logo', { timeout: 30000 });
   ok(await p.evaluate(() => __fd.save.state.crit['21'].best === 3 && __fd.prog.stars('21') === 3), 'reload keeps the Expedition and the stars');

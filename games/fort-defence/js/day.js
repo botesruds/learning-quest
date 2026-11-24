@@ -121,11 +121,11 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
   function paintHead(key, ph) {
     const tp = prog.topic(key);
     const T = tp.t, l = prog.L(key);
-    const list = T.kind === "invest" ? [["learn", "📖 Lesson"], T.exp ? ["exp", "🧭 Expedition"] : ["invest", "🕵️ Investigate"]] : [["learn", "📖 Lesson"], ["train", "🏋️ Train"], ["challenge", "⚔️ Challenge"], T.exp ? ["exp", "🧭 Expedition"] : ["brain", "🧠 Brain check"]];
+    const list = T.kind === "exp" ? [["learn", "📖 Lesson"], ["exp", "🧭 Expedition"]] : T.kind === "invest" ? [["learn", "📖 Lesson"], T.exp ? ["exp", "🧭 Expedition"] : ["invest", "🕵️ Investigate"]] : [["learn", "📖 Lesson"], ["train", "🏋️ Train"], ["challenge", "⚔️ Challenge"], T.exp ? ["exp", "🧭 Expedition"] : ["brain", "🧠 Brain check"]];
     const doneSet = new Set(); if (S().learnDone[key]) doneSet.add("learn"); if (l.train) doneSet.add("train"); if (l.stars >= 2) doneSet.add("challenge"); if (l.stars >= 3) { doneSet.add("brain"); doneSet.add("invest"); doneSet.add("exp"); }
     const R = tp.region;
     head([h("div", { class: "row", style: "justify-content:space-between;align-items:flex-start;gap:8px" },
-      h("div", { style: "min-width:0;flex:1" }, h("div", { class: "eyebrow" }, `${R ? R.emoji + " " + R.name + " · " : ""}Day ${prog.dayNo(key)}`), h("h2", {}, T.title)),
+      h("div", { style: "min-width:0;flex:1" }, h("div", { class: "eyebrow" }, `${R ? R.emoji + " " + R.name + " · " : ""}${prog.dayName(key)}`), h("h2", {}, T.title)),
       closeBtn()),
       h("div", { class: "row", style: "justify-content:space-between" }, h("div", { class: "phases" }, ...list.map(([k, lab]) => h("span", { class: "ph" + (k === ph ? " cur" : doneSet.has(k) ? " done" : "") }, doneSet.has(k) && k !== ph ? "✓ " + lab.split(" ").slice(1).join(" ") : lab))),
         h("span", { class: "stars", "aria-label": `${l.stars || 0} of 3 stars` }, ...[0, 1, 2].map(i => h("span", { class: i < (l.stars || 0) ? "" : "off" }, "⭐")))),
@@ -213,7 +213,7 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
   function openRepair(crack) {
     const key = crack.topic, tp = prog.topic(key); if (!tp) return;
     if (!sheet) mountSheet(); ctx = { key, loot: {} };
-    head([h("div", { class: "row", style: "justify-content:space-between;align-items:flex-start" }, h("div", {}, h("div", { class: "eyebrow" }, `🔧 Weak spot · Day ${prog.dayNo(key)}`), h("h2", {}, "Fix the cracked " + (crack.cell === "keep" ? "keep" : "wall"))), closeBtn()), lootbar]);
+    head([h("div", { class: "row", style: "justify-content:space-between;align-items:flex-start" }, h("div", {}, h("div", { class: "eyebrow" }, `🔧 Weak spot · ${prog.dayName(key)}`), h("h2", {}, "Fix the cracked " + (crack.cell === "keep" ? "keep" : "wall"))), closeBtn()), lootbar]);
     const T = tp.t; let hits = 0, tries = 0; const wrap = h("div", { class: "stack" }), area = h("div"), meter = h("div", { class: "row" });
     const paint = () => meter.replaceChildren(h("b", {}, "Repairs: "), ...[0, 1].map(i => h("span", { style: "font-size:1.8rem" }, i < hits ? "🧱" : "⚪")));
     function next() {
@@ -250,7 +250,7 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
         r.gold ? h("span", { class: "lm" }, `🪙 +${r.gold}`) : null, r.crystal ? h("span", { class: "lm" }, `💎 +${r.crystal}`) : null),
       r.won ? h("p", { style: "font-weight:800" }, r.fin ? (prog.pack.champion || "You are a champion.") + " You're ready for the test." : nextRegion ? `🔓 ${nextRegion.emoji} ${nextRegion.name} is open! Build a new fort there in a new style. Your materials, gold and plans come with you, and your ${r.region.name} fort stays just as you built it.` : "🔓 The next part of the quest is open!")
         : h("p", {}, "The demon lord cracked your walls where you missed. Repair these days (3 right on your own each), then face the lord again:"),
-      !r.won && repairs.length ? h("div", { class: "row", style: "justify-content:center;flex-wrap:wrap;gap:8px" }, ...repairs.map(k => h("span", { class: "lm" }, `🔧 Day ${prog.dayNo(k)}: ${prog.topic(k).t.short}`))) : null,
+      !r.won && repairs.length ? h("div", { class: "row", style: "justify-content:center;flex-wrap:wrap;gap:8px" }, ...repairs.map(k => h("span", { class: "lm" }, `🔧 ${prog.dayName(k)}: ${prog.topic(k).t.short}`))) : null,
       r.won && r.cracks.length ? h("p", { class: "cracknews" }, `💜 ${r.cracks.length} weak spot${r.cracks.length > 1 ? "s" : ""} cracked. Fix ${r.cracks.length > 1 ? "them" : "it"} from the dawn screen with 2 right answers.`) : null,
       ...nb.map(b => h("p", {}, `🏅 New badge: ${b.e} ${b.n}`)),
       h("p", { class: "savedok" }, st.mode === "practice" ? "💾 Saved on this device" : "💾 Game saved"),
@@ -266,12 +266,12 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
     if (r.passed) {
       up = prog.giveStars(key, 3); nb = prog.checkBadges(); land = onLand ? onLand() : null;
       const i = prog.road.findIndex(n => n.t === "level" && n.key === key); const nxt = prog.road.slice(i + 1).find(n => n.t !== "chest");
-      unlockTxt = !nxt ? "" : nxt.t === "level" ? `🔓 Day ${prog.dayNo(nxt.key)}: ${prog.topic(nxt.key).t.short} is unlocked!` : nxt.t === "lord" ? `👹 ${cap(nxt.region.lord.name)} is gathering his army…` : "🐉 The Final Castle is open!";
+      unlockTxt = !nxt ? "" : nxt.t === "level" ? `🔓 ${prog.dayName(nxt.key)}: ${prog.topic(nxt.key).t.short} is unlocked!` : nxt.t === "lord" ? `👹 ${cap(nxt.region.lord.name)} is gathering his army…` : "🐉 The Final Castle is open!";
     }
     paintHead(key, r.passed ? "done" : "brain");
-    head([h("div", { class: "row", style: "justify-content:space-between;align-items:flex-start" }, h("div", {}, h("div", { class: "eyebrow" }, `☀️ Morning · Day ${prog.dayNo(key)}`), h("h2", {}, tp.t.title)), closeBtn()), lootbar]);
+    head([h("div", { class: "row", style: "justify-content:space-between;align-items:flex-start" }, h("div", {}, h("div", { class: "eyebrow" }, `☀️ Morning · ${prog.dayName(key)}`), h("h2", {}, tp.t.title)), closeBtn()), lootbar]);
     const st = save.status(); onChange && onChange(); paintLoot();
-    set(celebrate(h("div", { class: "bigstars" }, r.passed ? "⭐⭐⭐" : "🌅"), h("h1", {}, r.passed ? `Day ${prog.dayNo(key)} mastered!` : "You survived the night!"),
+    set(celebrate(h("div", { class: "bigstars" }, r.passed ? "⭐⭐⭐" : "🌅"), h("h1", {}, r.passed ? `${prog.dayName(key)} mastered!` : "You survived the night!"),
       h("div", { class: "nightstats" },
         h("span", { class: "lm" }, `👾 ${r.kills} defeated`), r.bumps ? h("span", { class: "lm" }, `🏰 ${r.bumps} reached the keep`) : null,
         h("span", { class: "lm" }, `🧠 Brain check ${r.brain.right} of ${r.brain.total}`), r.gold ? h("span", { class: "lm" }, `🪙 +${r.gold}`) : null, r.crystal ? h("span", { class: "lm" }, `💎 +${r.crystal}`) : null),
@@ -298,13 +298,16 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
     set(ExpeditionView(tp.t.exp, { key, S, commit: () => save.commit(), record: r => prog.record(key, r),
       grant: r => grant(r === "own" ? LOOT.own : LOOT.help),
       giveStars: n => { const g = prog.giveStars(key, n); if (g) { paintHead(key, "exp"); onChange && onChange(); } return g; },
-      stars: () => prog.stars(key), onMastered: () => complete(key), onExit: () => close("stop") }));
+      stars: () => prog.stars(key), onMastered: () => complete(key), onExit: () => close("stop"),
+      // the AI writing coach and the Writing desk, from the Scribe's Tower (the Healer's Case marks its PEEL paragraph)
+      coach: t => scribeRef && scribeRef.coach ? scribeRef.coach(t) : Promise.resolve({ away: true, why: "practice" }),
+      desk: piece => scribeRef && scribeRef.toDesk ? scribeRef.toDesk(piece) : null }));
   }
 
   function donePhase(key) {
     set(celebrate(h("div", { class: "bigstars" }, "⭐⭐⭐"), h("h2", {}, "Mastered!"), h("p", {}, "Play again to gather more loot, or read the briefing again."),
       prog.topic(key).t.exp ? bigbtn("🧭 Expedition: play a round", () => open(key, { ph: "exp" })) : null,
-      prog.topic(key).t.exp && prog.topic(key).t.kind === "invest" ? null : bigbtn(prog.topic(key).t.kind === "invest" ? "🕵️ New investigation" : "⚔️ Gathering run for loot", () => open(key, { ph: prog.topic(key).t.kind === "invest" ? "invest" : "challenge", replay: true }), prog.topic(key).t.exp ? "plain" : undefined),
+      prog.topic(key).t.exp && prog.topic(key).t.kind ? null : bigbtn(prog.topic(key).t.kind === "invest" ? "🕵️ New investigation" : "⚔️ Gathering run for loot", () => open(key, { ph: prog.topic(key).t.kind === "invest" ? "invest" : "challenge", replay: true }), prog.topic(key).t.exp ? "plain" : undefined),
       bigbtn("📜 Read the briefing again", () => open(key, { ph: "learn", i: 0 }), "plain"),
       thinkReady(key) ? bigbtn("🧠 Think it through: sentence, phrase, word", () => thinkThrough(key, () => open(key)), "plain") : null,
       linkbtn("Back to the fort", () => close("x"))));
@@ -315,11 +318,11 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
   function complete(key) {
     const nb = prog.checkBadges(); save.commit(); sfx("star"); onChange && onChange(); paintHead(key, "done");
     const i = prog.road.findIndex(n => n.t === "level" && n.key === key); const nxt = prog.road.slice(i + 1).find(n => n.t !== "chest");
-    const unlockTxt = !nxt ? "" : nxt.t === "level" ? `🔓 Day ${prog.dayNo(nxt.key)}: ${prog.topic(nxt.key).t.short} is unlocked!` : nxt.t === "lord" ? `👹 ${cap(nxt.region.lord.name)} is gathering his army…` : "🐉 The Final Castle is open!";
+    const unlockTxt = !nxt ? "" : nxt.t === "level" ? `🔓 ${prog.dayName(nxt.key)}: ${prog.topic(nxt.key).t.short} is unlocked!` : nxt.t === "lord" ? `👹 ${cap(nxt.region.lord.name)} is gathering his army…` : "🐉 The Final Castle is open!";
     const land = onLand ? onLand() : null;
     const lootRow = h("div", { class: "lootsum" }, ...Object.entries(ctx ? ctx.loot : {}).map(([m, n]) => h("span", { class: "lm" }, m.startsWith("plan:") ? "📜 " + PIECES[m.slice(5)].name + (n > 1 ? " ×" + n : "") : MATS[m].icon + " " + n)));
     const st = save.status();
-    set(celebrate(h("div", { class: "bigstars" }, "⭐⭐⭐"), h("h1", {}, `Day ${prog.dayNo(key)} mastered!`), h("p", {}, "You can do it on your own AND you know why it works."),
+    set(celebrate(h("div", { class: "bigstars" }, "⭐⭐⭐"), h("h1", {}, `${prog.dayName(key)} mastered!`), h("p", {}, "You can do it on your own AND you know why it works."),
       lootRow.children.length ? h("div", {}, h("p", { class: "small muted" }, "Loot gathered today:"), lootRow) : null,
       land ? h("p", { class: "landnews" }, `🚩 New land claimed! Your fort can now be ${land} × ${land} squares.`) : null,
       h("p", { style: "font-weight:800" }, unlockTxt), ...nb.map(b => h("p", {}, `🏅 New badge: ${b.e} ${b.n}`)),
@@ -342,7 +345,7 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
   function peekAhead(key, i = 0) {
     if (!sheet) mountSheet(); ctx = null;
     const T = prog.topic(key).t;
-    head([h("div", { class: "row", style: "justify-content:space-between;align-items:flex-start" }, h("div", {}, h("div", { class: "eyebrow" }, `👀 Peek ahead · Day ${prog.dayNo(key)}`), h("h2", {}, T.short)), closeBtn()), lootbar]);
+    head([h("div", { class: "row", style: "justify-content:space-between;align-items:flex-start" }, h("div", {}, h("div", { class: "eyebrow" }, `👀 Peek ahead · ${prog.dayName(key)}`), h("h2", {}, T.short)), closeBtn()), lootbar]);
     set(h("div", { class: "stack peek" }, mission("👀 Getting ready for class: read this lesson now, so it feels familiar when your teacher starts it. No stars yet: the day opens for real when you get 3 stars on the day before."),
       LearnView(T.learn, i, j => peekAhead(key, j), () => { S().peeked = S().peeked || {}; S().peeked[key] = true; save.commit(); openMap(); }, null, "Back to the map")));
   }
@@ -358,7 +361,7 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
         const open = prog.nodeOpen(n), done = prog.nodeDone(n), isCur = cur && cur.t === n.t && cur.key === n.key && cur.region === n.region;
         if (n.t === "chest") return h("button", { class: "qtile chest" + (done ? " done" : ""), type: "button", onclick: () => openChest(pack, r) }, h("span", { class: "z" }, "📜"), h("span", { class: "nm" }, "Scout report"), h("span", { class: "kind" }, done ? "read" : "sneak peek"));
         if (n.t === "level") { const tp = prog.topic(n.key), st = prog.stars(n.key), rep = S().repair[n.key];
-          return h("button", { class: "qtile" + (open ? "" : " locked") + (isCur ? " next" : "") + (tp.t.big ? " big" : ""), type: "button", "aria-label": `Day ${prog.dayNo(n.key)}: ${tp.t.short}. ${st} stars.${open ? "" : " Locked."}`,
+          return h("button", { class: "qtile" + (open ? "" : " locked") + (isCur ? " next" : "") + (tp.t.big ? " big" : ""), type: "button", "aria-label": `${prog.dayName(n.key)}: ${tp.t.short}. ${st} stars.${open ? "" : " Locked."}`,
             onclick: () => { sfx("click"); if (!open) { peekAhead(n.key); return; } open_(n.key); } },
             h("span", { class: "z" }, String(prog.dayNo(n.key))), h("span", { class: "nm" }, tp.t.short), h("span", { class: "st" }, open ? (rep ? "🔧 repair" : "⭐".repeat(st) + "☆".repeat(3 - st)) : (S().peeked && S().peeked[n.key] ? "👀 peeked" : "👀 peek"))); }
         const lord = n.t === "lord" ? r.lord : r.final;
@@ -465,5 +468,6 @@ export function createDay({ save, prog, stage, toast, onClose, onBuild, onLand, 
   const kit = () => { if (!sheet) mountSheet(); ctx = { key: null, loot: {} }; paintLoot(); return { head, set, closeBtn, mission, celebrate, bigbtn, linkbtn, grant, lootbar }; };
 
   let report = null; const setReport = r => { report = r; };
-  return { setReport, kit, addParentSection: fn => extraParent.push(fn), open: open_, openChest, openMap, peekAhead, openShop, openParentGate, openParent, openRepair, morning, close, grant, get isOpen() { return !!sheet; }, paintLoot };
+  let scribeRef = null;
+  return { setReport, setScribe: x => { scribeRef = x; }, kit, addParentSection: fn => extraParent.push(fn), open: open_, openChest, openMap, peekAhead, openShop, openParentGate, openParent, openRepair, morning, close, grant, get isOpen() { return !!sheet; }, paintLoot };
 }

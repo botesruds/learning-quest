@@ -93,7 +93,7 @@ export function ExpeditionView(spec, ctx) {
       const afterBox = h("div");
       let hinted = false;
       const done = r => { if (it.after) afterBox.append(it.after()); cb(hinted && r === "own" ? "help" : r); };
-      if (it.custom) box.append(it.custom(done, round));
+      if (it.custom) box.append(it.custom(done, round, { coach: ctx.coach, desk: ctx.desk, key: ctx.key, parts, inst }));
       else {
         const hintBtn = round === 2 && it.hint ? h("button", { class: "btn small", type: "button", onclick: e => { hinted = true; e.currentTarget.replaceWith(h("div", { class: "verdict mid" }, "💡 " + it.hint)); } }, "💡 Hint") : null;
         box.append(AnswerBox(it.a, it.p || "", tries => done(tries || hinted ? "help" : "own"),

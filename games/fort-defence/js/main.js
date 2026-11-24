@@ -188,11 +188,11 @@ function dawnScreen() {
     sub = `${lord.name[0].toUpperCase() + lord.name.slice(1)} is coming! First get ready: ${[nr ? `read ${nr} dispatch${nr > 1 ? "es" : ""} in the 📚 Library` : "", nw ? `send ${nw} report${nw > 1 ? "s" : ""} to the King in the ✍️ Scribe's Tower` : ""].filter(Boolean).join(" and ")}.`;
   } else if (cur.t === "level" && !cur.repair && prog.nextPhase(cur.key) === "brain") {
     const tp = prog.topic(cur.key);
-    main = h("button", { class: "btn pulse go-day night", type: "button", onclick: () => startNight(cur.key) }, `🌙 Night of Day ${prog.dayNo(cur.key)}: ${tp.t.short}`);
+    main = h("button", { class: "btn pulse go-day night", type: "button", onclick: () => startNight(cur.key) }, `🌙 Night of ${prog.dayName(cur.key)}: ${tp.t.short}`);
     sub = "⭐⭐ so far. Build your defences, then face the night. The Brain check is in the runes.";
   } else if (cur.t === "level") {
     const tp = prog.topic(cur.key), st = prog.stars(cur.key);
-    main = h("button", { class: "btn pulse go-day", type: "button", onclick: () => { sfx("whoosh"); day.open(cur.key); } }, cur.repair ? `🔧 Repair: ${tp.t.short}` : `☀️ Day ${prog.dayNo(cur.key)}: ${tp.t.short}`);
+    main = h("button", { class: "btn pulse go-day", type: "button", onclick: () => { sfx("whoosh"); day.open(cur.key); } }, cur.repair ? `🔧 Repair: ${tp.t.short}` : `☀️ ${prog.dayName(cur.key)}: ${tp.t.short}`);
     if (!cur.repair && fort.count() === 0 && cur.region && cur.region.n > 1) sub0 = `A new land! Tap 🔨 Build to start your ${cur.region.name} fort.`;
     sub = sub0 ? sub0 : cur.repair ? "A demon lord found a weak spot. Fix it to make the wall strong again." : `${tp.region ? tp.region.emoji + " " + tp.region.name + " · " : ""}${st ? "⭐".repeat(st) + " so far" : "A new day"}`;
   } else {
@@ -287,7 +287,7 @@ function bench() {
     h("button", { type: "button", onclick: () => { const c = prog.currentNode(); if (!c.region) return; c.region.topics.forEach(id => { const k = prog.keyOf(c.pack, id); Object.assign(prog.L(k), { stars: 3, train: true }); S().learnDone[k] = true; delete S().repair[k]; }); save.commit(); landCheck(); dawnScreen(); toast("Region mastered: the demon lord is next"); } }, "master this region"),
     h("button", { type: "button", onclick: () => { S().gold += 500; save.commit(); toast("+500 gold"); dawnScreen(); } }, "+500 gold"),
     h("button", { type: "button", onclick: () => { const c = prog.currentNode(); if (c.t !== "level") return; Object.assign(prog.L(c.key), { stars: Math.max(2, prog.stars(c.key)), train: true }); S().learnDone[c.key] = true; save.commit(); dawnScreen(); toast("Day done: the night is next"); } }, "skip to tonight"),
-    h("button", { type: "button", onclick: () => { const c = prog.currentNode(); if (c.t !== "level") return; Object.assign(prog.L(c.key), { stars: 3, train: true }); S().learnDone[c.key] = true; delete S().repair[c.key]; save.commit(); const land = landCheck(); toast(`Day ${prog.dayNo(c.key)} mastered` + (land ? `, land is now ${land} × ${land}` : "")); dawnScreen(); } }, "master today"),
+    h("button", { type: "button", onclick: () => { const c = prog.currentNode(); if (c.t !== "level") return; Object.assign(prog.L(c.key), { stars: 3, train: true }); S().learnDone[c.key] = true; delete S().repair[c.key]; save.commit(); const land = landCheck(); toast(`${prog.dayName(c.key)} mastered` + (land ? `, land is now ${land} × ${land}` : "")); dawnScreen(); } }, "master today"),
     save.practice ? h("button", { type: "button", onclick: () => { save.resetPractice(); location.reload(); } }, "reset practice save") : null);
   const panel = h("div", { id: "bench", class: "panel" }, h("button", { type: "button", style: "float:right", onclick: () => panel.classList.toggle("min") }, "–"), h("h3", {}, "Test bench"), h("b", {}, "Fort"), fortRow, h("b", {}, "Sky"), moodRow, h("b", {}, "Music"), musRow, h("b", {}, "Sound effects"), sfxRow, out);
   document.body.append(panel);
@@ -342,6 +342,7 @@ function demoFort() {
   report = createReport({ save, prog, cards, day, patrol, toast });
   day.setReport && day.setReport(report);
   scribe = createScribe({ save, prog, day, toast, onChange: () => {} });
+  day.setScribe(scribe);
   day.addParentSection((dots, when, repaint) => scribe.has() ? scribe.parentSection(dots, when, repaint) : null);
   maproom = createMapRoom({ save, prog, day, toast, onChange: () => {} });
   day.addParentSection((dots, when) => maproom.parentSection(dots, when));
