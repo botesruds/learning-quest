@@ -6,6 +6,7 @@ import { DISPATCHES } from "./reading.js";
 import { REPORTS } from "./writing.js";
 import { GAPS, SPW, EXPLAIN, MAPS } from "./think.js";
 import { shuffle } from "../../js/qcore.js";
+import { LAB_PLAN, LAB_CHECKS } from "./expedition.js";
 
 /* thinking tasks (js/think.js): each day gets a fill-the-gap card at the end of its lesson and a fill-the-gap
    question maker in Train, Challenge and night runes (typed once the day has 3 stars) */
@@ -15,6 +16,8 @@ STEPS.forEach(t => {
   t.learn.push({ t: "try", h: "Your turn: fill the gaps", q: { ask: "Tap the words to fill the gaps.", gap: g[0], why: full(g[0]) } });
   t.gen.push(() => { const x = g[Math.floor(Math.random() * g.length)]; return { q: "Fill the gap.", steps: [], final: { p: "", a: { gap: { ...x, bank: shuffle(x.bank), key: "sci2:" + t.id } }, hint: "Read the whole sentence first, then pick the words that fit." }, why: full(x) }; });
 });
+/* day 13's Brain check is now the Lab Plan Expedition (js/expedition.js); its review cards join the why-questions */
+{ const T13 = STEPS.find(t => t.id === 13); T13.exp = LAB_PLAN; T13.checks.push(...LAB_CHECKS); }
 BADGES.push({ k: "sci2:map1", e: "🗺️", n: "Cell City Mapmaker", d: "Build the Cell City mind-map" });
 
 export default {
@@ -24,6 +27,7 @@ export default {
   unit: "How are we organised?",
   keyPrefix: "sci2:",            // save keys "sci2:1", "sci2:2"… so they never mix with the maths days
   champion: "You are a Body Champion!",
+  criteria: { A: "Know it and use it", B: "Plan a fair test", C: "Make sense of the results", D: "Science in the real world" },
   topics: STEPS,
   previews: PREVIEWS,
   understanding: UNDERSTANDING,

@@ -34,7 +34,7 @@ export function createCards(getS, commit, prog) {
   const cat = new Map();          // id -> { id, kind, key, pack, t, i? }
   const byTopic = new Map();      // topic key -> [card defs]
   PACKS.forEach(pack => pack.topics.forEach(t => {
-    if (t.kind) return;           // investigations and the practice exam have their own scoring
+    if (t.kind && !t.exp) return; // investigations and the practice exam have their own scoring (an Expedition day keeps its review cards)
     const key = (pack.keyPrefix || "") + t.id, list = [];
     (t.gen || []).forEach((g, i) => list.push({ id: `${key}|g${i}`, kind: "skill", key, pack, t, i }));
     if ((t.checks || []).length) list.push({ id: `${key}|why`, kind: "why", key, pack, t });

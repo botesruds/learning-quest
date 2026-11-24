@@ -103,10 +103,10 @@ export function createProgress(getS, commit, pack0 = activePack()) {
     const T = topic(key).t, l = L(key);
     if (S().repair[key]) return "challenge";
     if (!S().learnDone[key]) return "learn";
-    if (T.kind === "invest") return l.stars >= 3 ? "done" : "invest";
+    if (T.kind === "invest") return l.stars >= 3 ? "done" : T.exp ? "exp" : "invest";
     if (!l.train) return "train";
     if (l.stars < 2) return "challenge";
-    if (l.stars < 3) return "brain";
+    if (l.stars < 3) return T.exp ? "exp" : "brain";   // an Expedition day: the third star comes from its rounds
     return "done";
   }
   /* the day number shown to Oliver: the topic's place in its pack */

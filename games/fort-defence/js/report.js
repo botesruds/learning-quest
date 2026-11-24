@@ -13,6 +13,7 @@ import { h, esc } from "./qcore.js";
 import { PACKS } from "../packs/index.js";
 import { METALS, CAP } from "./cards.js";
 import { sfx } from "./audio.js";
+import { RUNGS, Ladder, peekCrit, CRIT_WORDS } from "./expedition.js";
 
 const LIGHT = {
   green: { w: "I can do this", c: "good" }, amber: { w: "Getting there", c: "warn" }, red: { w: "Needs practice", c: "bad" }, grey: { w: "Coming up", c: "grey" },
@@ -60,6 +61,46 @@ export function createReport({ save, prog, cards, day, patrol, toast }) {
     return null;
   }
 
+  /* ---------- the four criteria (A B C D) ----------
+     A comes from the unit's day lights; B, C and D from that criterion's Expedition (best rung). No Expedition yet = Coming up. */
+  function critCells(pack, days, light) {
+    const exps = {}; pack.topics.forEach(t => { if (t.exp) exps[t.exp.crit] = { t, key: kp(pack, t.id), spec: t.exp }; });
+    return ["A", "B", "C", "D"].map(L => {
+      const w = pack.criteria[L];
+      if (L === "A") {
+        const lit = days.filter(x => !x.t.exp && !x.t.kind).map(light).filter(l => l !== "grey");
+        const c = !lit.length ? "grey" : lit.filter(l => l === "red").length >= 2 ? "red" : lit.filter(l => l === "green").length * 3 >= lit.length * 2 ? "green" : "amber";
+        return { L, w, light: c, s: LIGHT[c].w };
+      }
+      const e = exps[L]; if (!e) return { L, w, light: "grey", s: "Coming up", soon: true };
+      const c = peekCrit(S(), e.key);
+      if (!c || c.best < 0) return stars(e.key) >= 3 ? { L, w, light: "green", s: LIGHT.green.w, e } : stars(e.key) || S().learnDone[e.key] ? { L, w, light: "amber", s: LIGHT.amber.w, e } : { L, w, light: "grey", s: "Coming up", e };
+      const lt = c.best >= 2 ? "green" : c.best === 1 ? "amber" : "red";
+      return { L, w, light: lt, s: "Rung " + RUNGS[c.best] + (c.best === 3 ? " 👑" : ""), e, c };
+    });
+  }
+  function critStrip(pack, cells, o) {
+    return h("div", { class: "card stack rp-critcard" }, h("div", { class: "eyebrow" }, "How I'm doing on the four criteria"),
+      h("div", { class: "rp-crit" }, ...cells.map(x => h("button", { class: "rp-cl l-" + x.light, type: "button", "data-crit": x.L, onclick: () => { sfx("click");
+        if (x.soon) return toast("Coming soon: a new Expedition for this criterion.");
+        if (x.L === "A") return toast("A is knowing and using the ideas: every day's light below.");
+        openCrit(pack, x, o); } },
+        h("b", { class: "L" }, x.L), h("span", { class: "rp-dot " + LIGHT[x.light].c }), h("span", { class: "w" }, x.w), h("span", { class: "s" }, x.s)))));
+  }
+  function openCrit(pack, x, o) {
+    const k = day.kit(), spec = x.e.spec, best = x.c ? x.c.best : -1;
+    const node = prog.road.find(n => n.key === x.e.key);
+    const go = pack !== prog.pack ? () => toast(`Open ${pack.subject} from the home page to play this Expedition.`)
+      : node && (prog.nodeOpen(node) || prog.nodeDone(node)) ? () => day.open(x.e.key, prog.nextPhase(x.e.key) === "done" ? { ph: "exp" } : {})
+        : () => toast("This Expedition opens when you reach it on the quest map.");
+    k.head([h("div", { class: "row", style: "justify-content:space-between;align-items:center" }, h("div", {}, h("div", { class: "eyebrow" }, `Criterion ${x.L} · ${spec.critName}`), h("h2", {}, spec.kid)),
+      h("button", { class: "btn small", type: "button", onclick: () => { sfx("click"); openReport(pack, o); } }, "◂ My report"))]);
+    k.set(h("div", { class: "stack" }, h("div", { class: "card stack" },
+      best >= 0 ? Ladder(spec, best, { mine: false }) : h("p", {}, "You haven't tried this Expedition yet. Here's the ladder your teacher uses:"),
+      best < 0 ? Ladder(spec, -1) : null,
+      h("button", { class: "bigbtn go", type: "button", onclick: () => { sfx("click"); go(); } }, "Practise now ▸"))));
+  }
+
   /* ---------- Oliver's report ---------- */
   function openReport(pack = prog.pack, o = {}) {
     cards.ensure(); const k = day.kit(); const grown = !!o.grown;
@@ -101,10 +142,30 @@ export function createReport({ save, prog, cards, day, patrol, toast }) {
       list.push(row);
     });
     const parts = [top, h("div", { class: "stack rp-list" }, ...list)];
+    const cells = pack.criteria ? critCells(pack, days, light) : null;
+    if (cells) parts.splice(1, 0, critStrip(pack, cells, o));
+    if (cells && grown) parts.push(critGrown(pack, cells));
     if (grown) parts.splice(1, 0, ...grownCards(pack, R, days));
     else parts.push(h("div", { class: "row", style: "gap:8px;justify-content:center;flex-wrap:wrap" }, h("button", { class: "btn", type: "button", onclick: () => { sfx("click"); patrol.openArmoury(); } }, "⚔️ My armoury")));
     k.set(h("div", { class: "stack rp" + (grown ? " grown" : "") }, ...parts));
-    window.__fdr = { pack: pack.id, grown, lights: Object.fromEntries(days.map(x => [x.key, light(x)])) };
+    window.__fdr = { pack: pack.id, grown, lights: Object.fromEntries(days.map(x => [x.key, light(x)])), crit: cells ? Object.fromEntries(cells.map(x => [x.L, x.light + "|" + x.s])) : null };
+  }
+
+  /* the grown-up lines for the four criteria: band, parts on his own and with help, his write-up */
+  function critGrown(pack, cells) {
+    const names = CRIT_WORDS[pack.subject] || {};
+    return h("div", { class: "card small stack rp-critgrown" }, h("b", {}, "The four criteria (practice bands)"),
+      ...cells.map(x => {
+        const head = `${x.L}, ${names[x.L] || x.w}: `;
+        if (x.L === "A") return h("p", {}, head + `from the day lights below (${LIGHT[x.light].w.toLowerCase()}).`);
+        if (x.soon) return h("p", { class: "muted" }, head + "no Expedition yet (coming in a later stage).");
+        if (!x.c || x.c.best < 0) return h("p", {}, head + (stars(x.e.key) >= 3 ? "mastered under the old investigation; no Expedition round yet." : "not tried yet."));
+        const P = x.c.parts || {}, nm = k => (x.e.spec.partNames || {})[k] || k;
+        const own = Object.keys(P).filter(k => P[k] === "own").map(nm), help = Object.keys(P).filter(k => P[k] !== "own").map(nm);
+        return h("div", {}, h("p", {}, h("b", {}, head + `band ${RUNGS[x.c.best]}`), ` (${when(x.c.at)}, round ${x.c.round || "?"}). On his own: ${own.join(", ") || "none"}. With help: ${help.join(", ") || "none"}.`),
+          x.c.text ? h("details", {}, h("summary", {}, "His write-up"), h("div", { class: "why", style: "white-space:pre-line" }, x.c.text)) : null);
+      }),
+      h("p", { class: "small muted" }, "Practice bands from Fort Defence, not school marks."));
   }
 
   /* one line of detail for grown-ups: each card's metal, when he last practised, when it comes back */
